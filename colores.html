@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            background-color: black;
+        }
+
+        #pelota {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background-color: rgb(0, 0, 255);
+            margin-top: 200px;
+            margin-left: 750px;
+        }
+
+        #brilloInterior {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+            margin-top: 50px;
+            margin-left: 50px;
+
+        }
+
+        .controls {
+            margin-left: 815px;
+            margin-top: 75px;
+        }
+
+        .colors {
+            margin-left: 815px;
+            margin-top: 75px;
+            display: flex;
+        }
+
+        button {
+            padding: 5px 10px;
+        }
+
+        .colors>div {
+            width: 25px;
+            height: 25px;
+            margin: 5px;
+        }
+
+        .colors>div:hover {
+            border: 2px solid white;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="pelota">
+        <div id="brilloInterior"></div>
+    </div>
+    <div class="controls">
+        <button onclick="cambiarBrillo(0.1)">+</button>
+        <button onclick="cambiarBrillo(-0.1)">-</button>
+    </div>
+    <div class="colors">
+        <div style="background-color:red" onclick="cambiarColor('rgb(255,0,0)')"></div>
+        <div style="background-color:blue" onclick="cambiarColor('rgb(0,0,255)')"></div>
+        <div style="background-color:purple" onclick="cambiarColor('rgb(128,0,128)')"></div>
+        <div style="background-color:lightgreen" onclick="cambiarColor('rgb(144,238,144)')"></div>
+        <div style="background-color:rgb(231, 0, 235)" onclick="cambiarColor('rgb(231, 0, 235)')"></div>
+        <div style="background-color:rgb(255, 251, 0)" onclick="cambiarColor('rgb(255, 251, 0)')"></div>
+    </div>
+    <script defer>
+
+        let pelota = document.getElementById("pelota");
+        let brilloInterior = document.getElementById("brilloInterior");
+        let brillo = 0;
+        let color = colorValues("blue");
+
+
+        function cambiarBrillo(n) {
+
+            if (brillo < 0) {
+                brillo = 0;
+            }
+            if (brillo > 1) {
+                brillo = 1;
+            }
+            brillo += n;
+
+            brilloInterior.style.boxShadow = "33px 13px 46px 34px rgba(240,240,255," + brillo + ")";
+            pelota.style.boxShadow = "0 0 40px 15px " + "rgba(" + color[0] + "," + color[1] + "," + color[2] + "," + brillo + ")";
+        }
+
+        function cambiarColor(colorTemp) {
+            pelota.style.backgroundColor = colorTemp;
+            color = colorValues(colorTemp);
+            cambiarBrillo(0)
+        }
+
+        function colorValues(color) {
+            if (!color)
+                return;
+            if (color.toLowerCase() === 'transparent')
+                return [0, 0, 0, 0];
+            if (color[0] === '#') {
+                if (color.length < 7) {
+                    // convert #RGB and #RGBA to #RRGGBB and #RRGGBBAA
+                    color = '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3] + (color.length > 4 ? color[4] + color[4] : '');
+                }
+                return [parseInt(color.substr(1, 2), 16),
+                parseInt(color.substr(3, 2), 16),
+                parseInt(color.substr(5, 2), 16),
+                color.length > 7 ? parseInt(color.substr(7, 2), 16) / 255 : 1];
+            }
+            if (color.indexOf('rgb') === -1) {
+                // convert named colors
+                var temp_elem = document.body.appendChild(document.createElement('fictum')); // intentionally use unknown tag to lower chances of css rule override with !important
+                var flag = 'rgb(1, 2, 3)'; // this flag tested on chrome 59, ff 53, ie9, ie10, ie11, edge 14
+                temp_elem.style.color = flag;
+                if (temp_elem.style.color !== flag)
+                    return; // color set failed - some monstrous css rule is probably taking over the color of our object
+                temp_elem.style.color = color;
+                if (temp_elem.style.color === flag || temp_elem.style.color === '')
+                    return; // color parse failed
+                color = getComputedStyle(temp_elem).color;
+                document.body.removeChild(temp_elem);
+            }
+            if (color.indexOf('rgb') === 0) {
+                if (color.indexOf('rgba') === -1)
+                    color += ',1'; // convert 'rgb(R,G,B)' to 'rgb(R,G,B)A' which looks awful but will pass the regxep below
+                return color.match(/[\.\d]+/g).map(function (a) {
+                    return +a
+                });
+            }
+        }
+    </script>
+</body>
+
+</html>
