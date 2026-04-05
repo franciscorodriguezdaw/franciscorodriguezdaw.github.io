@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ChronosGlobe: El Mundo Histórico</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        #ui-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 5px solid #ff9800;
+            color: white;
+            width: 320px;
+        }
+
+        #year-slider {
+            width: 100%;
+            margin-top: 15px;
+            cursor: pointer;
+            accent-color: #ff9800;
+        }
+
+        .year-label {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ff9800;
+        }
+
+        #tooltip {
+            position: absolute;
+            display: none;
+            background: rgba(10, 10, 10, 0.98);
+            color: white;
+            padding: 20px;
+            border: 1px solid #ff9800;
+            border-radius: 10px;
+            pointer-events: none;
+            width: 300px;
+            z-index: 100;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.8);
+        }
+
+        h3 {
+            margin: 0 0 5px 0;
+            color: #ff9800;
+        }
+
+        .tag {
+            font-size: 0.7rem;
+            font-weight: bold;
+            background: #ff9800;
+            color: black;
+            padding: 2px 5px;
+            border-radius: 3px;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+
+        p {
+            font-size: 0.9rem;
+            line-height: 1.4;
+            color: #ccc;
+            margin: 0;
+        }
+
+        .event-tooltip {
+            border-color: #ff4444 !important;
+            background: rgba(30, 0, 0, 0.98) !important;
+        }
+
+        .event-tooltip h3 {
+            color: #ff4444 !important;
+        }
+
+        .event-tag {
+            background: #ff4444;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: bold;
+            padding: 2px 5px;
+            border-radius: 3px;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="ui-container">
+        <span class="year-label" id="year-display">117 d.C.</span>
+        <input type="range" id="year-slider" min="117" max="2024" value="117">
+    </div>
+    <div id="tooltip"></div>
+
+    <script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+</script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- CONFIGURACIÓN BÁSICA ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 0, 0);
+        controls.enableDamping = true;
+        camera.position.set(2, 1.5, 3);
+        controls.enableDamping = true;
+        controls.enablePan = false;
+
+        // --- ILUMINACIÓN ---
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+        sun.position.set(5, 3, 5);
+        scene.add(sun);
+
+        // --- CARGA DE TEXTURAS ---
+        const loader = new THREE.TextureLoader();
+        const textureDay = loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg');
+        // Textura de luces nocturnas
+        const textureNight = loader.load('8k_earth_nightmap.jpg');
+        // --- GLOBO ---
+        const globeGeometry = new THREE.SphereGeometry(1, 64, 64);
+        // Usamos MeshStandardMaterial para que reaccione mejor a la luz y permita mapas de emisión
+        const globeMaterial = new THREE.MeshStandardMaterial({
+            map: textureDay,
+            metalness: 0.1,
+            roughness: 0.8
+        });
+        const globe = new THREE.Mesh(globeGeometry, globeMaterial);
+        globe.name = "tierra";
+        scene.add(globe);
+
+        const starGeometry = new THREE.BufferGeometry();
+        const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.005 });
+        const starVertices = [];
+        for (let i = 0; i < 10000; i++) {
+            const x = (Math.random() - 0.5) * 2000;
+            const y = (Math.random() - 0.5) * 2000;
+            const z = (Math.random() - 0.5) * 2000;
+            starVertices.push(x, y, z);
+        }
+        starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+        const stars = new THREE.Points(starGeometry, starMaterial);
+        scene.add(stars);
+
+        // --- NUBES ---
+        const cloudMesh = new THREE.Mesh(
+            new THREE.SphereGeometry(1.01, 64, 64),
+            new THREE.MeshPhongMaterial({
+                map: loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png'),
+                transparent: true,
+                opacity: 0.3,
+                depthWrite: false
+            })
+        );
+        scene.add(cloudMesh);
+
+        // --- GRUPOS PARA OBJETOS DINÁMICOS ---
+        const empiresGroup = new THREE.Group();
+        scene.add(empiresGroup);
+
+        // Grupo para los marcadores de eventos [NUEVO]
+        const eventsGroup = new THREE.Group();
+        scene.add(eventsGroup);
+
+        // --- FUNCIONES UTILS ---
+        function latLonToVec3(lat, lon, rad) {
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = (lon + 180) * (Math.PI / 180);
+            return new THREE.Vector3(-rad * Math.sin(phi) * Math.cos(theta), rad * Math.cos(phi), rad * Math.sin(phi) * Math.sin(theta));
+        }
+
+        // Función para saber si un punto está dentro de un polígono 2D
+        function isPointInPoly(pt, poly) {
+            let isInside = false;
+            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                if (((poly[i][1] > pt[1]) !== (poly[j][1] > pt[1])) &&
+                    (pt[0] < (poly[j][0] - poly[i][0]) * (pt[1] - poly[i][1]) / (poly[j][1] - poly[i][1]) + poly[i][0])) {
+                    isInside = !isInside;
+                }
+            }
+            return isInside;
+        }
+
+        // --- DATOS HISTÓRICOS (Timeline) ---
+        // Asegúrate de usar AQUÍ tu timeline completo. He reducido este para el ejemplo.
+        const timeline = [
+            {
+                year: 117, label: "117 d.C. - El Mundo Antiguo",
+                empires: [
+                    // EUROPA
+                    { name: "Imperio Romano", color: 0xff0000, points: [[-9, 38], [15, 50], [35, 45], [40, 30], [15, 30]], status: "Cénit", desc: "Desde Escocia al Sáhara.", fact: "Inventaron el hormigón que fragua bajo el agua, ¡por eso el Panteón sigue en pie!" },
+                    { name: "Caledonia (Pictos)", color: 0x444444, points: [[-5, 56], [-3, 58], [-2, 56]], status: "Indomables", desc: "Tribus del norte de Gran Bretaña.", fact: "Roma construyó el Muro de Adriano solo para mantenerlos fuera." },
+                    { name: "Germania Magna", color: 0x556622, points: [[5, 50], [15, 55], [20, 50], [10, 48]], status: "Tribus Guerreras", desc: "Pueblos bárbaros del norte.", fact: "Aniquilaron tres legiones romanas en el bosque de Teutoburgo." },
+                    { name: "Dacia", color: 0xaa8822, points: [[20, 44], [25, 48], [30, 45]], status: "Reino del Oro", desc: "Actual Rumanía.", fact: "Trajano usó el botín de Dacia para pagar juegos de gladiadores que duraron 123 días." },
+                    { name: "Sármatas", color: 0x8844aa, points: [[35, 45], [50, 50], [55, 45]], status: "Jinetes Esteparios", desc: "Nómadas de Europa del Este.", fact: "Sus mujeres guerreras pudieron ser la base real del mito de las Amazonas." },
+
+                    // ASIA
+                    { name: "Dinastía Han", color: 0xffcc00, points: [[100, 35], [120, 40], [120, 25], [105, 22]], status: "Edad de Oro", desc: "El gigante de Oriente.", fact: "Tenían una policía especializada solo en proteger la cría de gusanos de seda." },
+                    { name: "Imperio Kushán", color: 0x00ff88, points: [[65, 35], [75, 40], [68, 25]], status: "El Puente", desc: "Asia Central.", fact: "Fue el primer lugar donde se mezcló el arte griego con el budismo." },
+                    { name: "Reino de Satavahana", color: 0xff8844, points: [[72, 20], [82, 22], [80, 15]], status: "India Central", desc: "Protectores del budismo.", fact: "Emitieron las primeras monedas indias con las caras de sus reyes." },
+                    { name: "Reino de Goguryeo", color: 0x4488ff, points: [[123, 38], [130, 42], [128, 35]], status: "Corea Antigua", desc: "Estado militarizado.", fact: "Eran tan buenos arqueros que decían que podían disparar a una mosca a 100 metros." },
+                    { name: "Reino de Armenia", color: 0xcc4444, points: [[40, 38], [45, 41], [46, 38]], status: "Estado Tapón", desc: "Entre Roma y Partia.", fact: "Primer país del mundo en declarar el cristianismo como religión oficial." },
+
+                    // ÁFRICA
+                    { name: "Reino de Aksum", color: 0x00ccff, points: [[35, 15], [42, 15], [35, 8]], status: "Etiopía", desc: "Potencia comercial.", fact: "Controlaban el comercio de marfil y especias entre India y Roma." },
+                    { name: "Reino de Kush", color: 0x8B4513, points: [[30, 18], [34, 22], [32, 15]], status: "Nubia", desc: "Vecinos de Egipto.", fact: "Sus reinas guerreras (Kandakes) lideraban ejércitos contra los invasores." },
+                    { name: "Garamantes", color: 0xddaa44, points: [[10, 25], [18, 27], [15, 22]], status: "Señores del Desierto", desc: "En el corazón del Sáhara.", fact: "Construyeron túneles subterráneos de cientos de km para sacar agua del desierto." },
+                    { name: "Cultura Nok", color: 0x996633, points: [[5, 8], [12, 10], [10, 6]], status: "Escultores", desc: "Nigeria central.", fact: "Fueron de los primeros en África subsahariana en fundir hierro para herramientas." },
+                    { name: "Mauritania", color: 0xccaa88, points: [[-8, 32], [-2, 35], [5, 30]], status: "Reino Bereber", desc: "Aliados de Roma.", fact: "Su rey Juba II era uno de los hombres más cultos del mundo antiguo." },
+
+                    // AMÉRICA
+                    { name: "Teotihuacán", color: 0x9933ff, points: [[-100, 20], [-98, 21], [-97, 19]], status: "Metrópolis", desc: "México central.", fact: "Llegó a tener 150.000 habitantes, más que la mayoría de ciudades europeas." },
+                    { name: "Mayas Preclásicos", color: 0x00ff44, points: [[-92, 18], [-88, 20], [-89, 15]], status: "Selva", desc: "Península de Yucatán.", fact: "Ya usaban el chocolate como moneda y bebida sagrada." },
+                    { name: "Cultura Nazca", color: 0xffaa00, points: [[-76, -14], [-74, -15], [-75, -17]], status: "Líneas de Nazca", desc: "Costa del Perú.", fact: "Hicieron dibujos gigantes en el suelo que solo se ven bien desde un avión." },
+                    { name: "Cultura Moche", color: 0xff4444, points: [[-80, -8], [-78, -10], [-79, -6]], status: "Maestros del Oro", desc: "Perú septentrional.", fact: "Eran tan buenos con la cerámica que sus vasijas parecen retratos reales en 3D." },
+                    { name: "Cultura Adena", color: 0x66ccaa, points: [[-85, 38], [-80, 42], [-82, 36]], status: "Montículos", desc: "Valle del Ohio, EE.UU.", fact: "Enterraban a su gente en colinas artificiales con forma de serpiente." }
+                ],
+                events: [
+                    {
+                        name: "Inauguración del Foro de Trajano",
+                        lat: 41.89, lon: 12.48,
+                        iconUrl: '🏛️',
+                        date: "Año 112-117",
+                        desc: "El centro comercial y político más grande del mundo antiguo.",
+                        fact: "La Columna de Trajano todavía está en pie en Roma, narrando sus batallas piedra a piedra."
+                    }
+                ]
+            },
+            {
+                year: 1492, label: "1492 - El Encuentro de Mundos",
+                empires: [
+                    // EUROPA
+                    { name: "Corona de Castilla y Aragón", color: 0xffcc00, points: [[-9, 36], [-2, 43], [3, 37]], status: "Unificación", desc: "Reyes Católicos.", fact: "Ese mismo año recuperaron Granada, terminando con 800 años de presencia islámica." },
+                    { name: "Reino de Francia", color: 0x0000ff, points: [[-2, 44], [4, 49], [6, 43]], status: "Renacimiento", desc: "Consolidación monárquica.", fact: "El rey Carlos VIII invadió Italia este año, iniciando décadas de guerras culturales." },
+                    { name: "Sacro Imperio Romano", color: 0xffee00, points: [[6, 47], [15, 52], [14, 46]], status: "Fragmentado", desc: "Corazón de Europa.", fact: "Era un rompecabezas de más de 300 estados distintos unidos por un solo emperador." },
+                    { name: "Imperio Otomano", color: 0x006622, points: [[20, 35], [30, 42], [35, 35]], status: "Expansión", desc: "Amenaza sobre Europa.", fact: "Acogieron a miles de judíos expulsados de España, llamándolos 'un tesoro para el imperio'." },
+                    { name: "Principado de Moscú", color: 0x00cc44, points: [[35, 53], [45, 58], [42, 53]], status: "Iván III", desc: "Nace la Rusia moderna.", fact: "Iván el Grande dejó de pagar tributo a los mongoles, declarándose el primer 'Zar'." },
+
+                    // ASIA
+                    { name: "Dinastía Ming", color: 0xaa0000, points: [[105, 35], [122, 38], [115, 25]], status: "Aislamiento", desc: "China Imperial.", fact: "Acababan de reconstruir la Gran Muralla con piedra, tal como la vemos hoy en día." },
+                    { name: "Sultanato de Delhi", color: 0x00ffcc, points: [[72, 25], [80, 28], [78, 20]], status: "Declive", desc: "Norte de la India.", fact: "Estaba a punto de ser conquistado por los Mogoles que venían de Asia Central." },
+                    { name: "Shogunato Ashikaga", color: 0x444444, points: [[130, 32], [140, 38], [135, 32]], status: "Sengoku", desc: "Japón en guerra civil.", fact: "Cualquier campesino podía convertirse en señor de la guerra si era lo bastante astuto." },
+                    { name: "Dinastía Joseon", color: 0x4488ff, points: [[125, 35], [129, 38], [127, 34]], status: "Corea", desc: "Florecimiento cultural.", fact: "Inventaron el Hangul, uno de los alfabetos más científicos y fáciles de aprender del mundo." },
+                    { name: "Imperio Timurida", color: 0xccaa00, points: [[55, 32], [65, 38], [62, 30]], status: "Persia/Samarcanda", desc: "Centro de la seda.", fact: "Sus palacios eran tan azules que los poetas decían que hacían palidecer al cielo." },
+
+                    // ÁFRICA
+                    { name: "Imperio Songhai", color: 0x8b4513, points: [[-5, 15], [5, 18], [5, 10]], status: "Cénit", desc: "Tombuctú.", fact: "Tombuctú tenía universidades con más estudiantes que toda la población de muchas ciudades europeas." },
+                    { name: "Imperio de Etiopía", color: 0x00ccff, points: [[35, 10], [42, 12], [38, 7]], status: "Poder Cristiano", desc: "Reino de las montañas.", fact: "Creían guardar el Arca de la Alianza original en una de sus iglesias de piedra." },
+                    { name: "Reino del Congo", color: 0xaa66cc, points: [[12, -5], [18, -2], [15, -8]], status: "Estado Centralizado", desc: "África Central.", fact: "Su rey se convirtió al cristianismo voluntariamente para comerciar con Europa." },
+                    { name: "Imperio de Benin", color: 0xff4444, points: [[4, 6], [7, 8], [6, 5]], status: "Ciudad de los Muros", desc: "Nigeria.", fact: "Tenían una muralla de tierra más larga que la Gran Muralla China, protegiendo sus bosques." },
+                    { name: "Reino de Simbabwe", color: 0x77dd77, points: [[28, -20], [32, -18], [30, -22]], status: "Monomotapa", desc: "Sur de África.", fact: "Sus ciudades eran de piedra labrada sin usar mortero, ¡se aguantaban por su propio peso!" },
+
+                    // AMÉRICA
+                    { name: "Imperio Azteca", color: 0x228822, points: [[-103, 18], [-96, 21], [-98, 16]], status: "Tenochtitlán", desc: "Dominio del Valle de México.", fact: "Su capital era una ciudad flotante sobre un lago con puentes levadizos y canales." },
+                    { name: "Imperio Inca", color: 0xeecc00, points: [[-80, -10], [-70, -15], [-72, -35]], status: "Tahuantinsuyo", desc: "Desde Ecuador a Chile.", fact: "No usaban dinero ni escritura; lo controlaban todo con cuerdas de nudos llamadas Quipus." },
+                    { name: "Mayas de las Tierras Bajas", color: 0x00ff44, points: [[-91, 15], [-88, 20], [-87, 14]], status: "Resistencia", desc: "Península de Yucatán.", fact: "Aunque sus grandes ciudades habían caído, sus astrónomos seguían calculando el tiempo con precisión absoluta." },
+                    { name: "Mississippianos", color: 0x66ccaa, points: [[-92, 33], [-85, 38], [-88, 30]], status: "Cahokia", desc: "Constructores de montículos.", fact: "Construyeron pirámides de tierra tan grandes que hoy parecen colinas naturales en EE.UU." },
+                    { name: "Taínos", color: 0xff88aa, points: [[-75, 18], [-68, 20], [-70, 16]], status: "Antillas", desc: "Primer contacto.", fact: "Palabras como 'huracán', 'barbacoa' y 'hamaca' vienen directamente de su idioma." }
+                ],
+                events: [
+                    { name: "Primer Viaje de Colón", lat: 24.0, lon: -74.5, iconUrl: '⛵', date: "12 Octubre", desc: "Llegada a la isla de Guanahani (San Salvador).", fact: "Colón creía firmemente que había llegado a las Indias orientales." }
+                ]
+            },
+            {
+                year: 1580, label: "1580 - El Siglo de los Gigantes",
+                empires: [
+                    // EUROPA
+                    { name: "Imperio Español", color: 0xffcc00, points: [[-10, 36], [-10, 44], [4, 44], [4, 36]], status: "Hegemonía", desc: "Felipe II.", fact: "El Real de a 8 español fue la moneda oficial en China y EE.UU. durante siglos." },
+                    { name: "Reino de Inglaterra", color: 0xcc0000, points: [[-5, 50], [1, 54], [2, 51]], status: "Isabel I", desc: "Época de Shakespeare.", fact: "La reina Isabel I tenía los dientes negros por su adicción al azúcar." },
+                    { name: "Zarato Ruso", color: 0x006622, points: [[35, 55], [50, 60], [45, 50]], status: "Iván el Terrible", desc: "Nace el imperio ruso.", fact: "Iván el Terrible mató a su propio hijo en un ataque de ira." },
+                    { name: "Mancomunidad Polaco-Lituana", color: 0xee4444, points: [[18, 50], [25, 55], [30, 48]], status: "Los Húsares", desc: "El estado más grande de Europa.", fact: "Sus jinetes (Húsares Alados) llevaban alas reales en la espalda para asustar caballos." },
+                    { name: "Francia (Valois)", color: 0x0000ff, points: [[-2, 44], [4, 49], [6, 43]], status: "Guerras de Religión", desc: "Lucha entre católicos y hugonotes.", fact: "París era tan peligrosa que se la conocía como la 'Corte de los Milagros'." },
+
+                    // ASIA
+                    { name: "Imperio Mogol", color: 0x00ffcc, points: [[70, 30], [85, 32], [80, 15]], status: "India", desc: "Riqueza infinita.", fact: "Su emperador Akbar era analfabeto pero tenía una biblioteca de 24.000 libros." },
+                    { name: "Dinastía Ming", color: 0xaa0000, points: [[105, 40], [122, 40], [115, 22]], status: "Muralla China", desc: "Fin de las exploraciones.", fact: "Sus barcos 'Tesoro' eran tan grandes que tenían huertos para cultivar verdura a bordo." },
+                    { name: "Shogunato Ashikaga", color: 0x444444, points: [[130, 32], [140, 38], [135, 30]], status: "Japón Samurai", desc: "Era de guerras civiles.", fact: "Un samurai prefería el suicidio (Seppuku) antes que perder el honor." },
+                    { name: "Imperio Safávida", color: 0x0044ff, points: [[50, 30], [62, 35], [55, 25]], status: "Persia", desc: "Renacimiento del arte.", fact: "Isfahán era tan bella que decían que era 'la mitad del mundo'." },
+                    { name: "Dinastía Taungoo", color: 0xccaa00, points: [[95, 15], [100, 22], [98, 12]], status: "Birmania", desc: "Mayor imperio del Sudeste Asiático.", fact: "Usaban cientos de elefantes de guerra protegidos con armaduras de cuero." },
+
+                    // ÁFRICA
+                    { name: "Imperio Songhai", color: 0x8b4513, points: [[-5, 15], [5, 18], [5, 10]], status: "Tombuctú", desc: "Control del oro.", fact: "Un libro en Tombuctú valía más que su peso en oro." },
+                    { name: "Imperio de Etiopía", color: 0x00ccff, points: [[35, 10], [42, 12], [38, 7]], status: "Dinastía Salomónica", desc: "Cristianos rodeados.", fact: "Decían ser descendientes directos del Rey Salomón y la Reina de Saba." },
+                    { name: "Reino del Congo", color: 0xaa66cc, points: [[12, -5], [18, -2], [15, -8]], status: "Poder Central", desc: "Aliados de Portugal.", fact: "Su rey Afonso I escribió cartas al Papa quejándose del tráfico de esclavos." },
+                    { name: "Imperio Mutapa", color: 0x77dd77, points: [[28, -18], [33, -20], [30, -23]], status: "Zimbabwe", desc: "Comercio de oro.", fact: "Los portugueses intentaron conquistarlos y fracasaron por culpa de los mosquitos." },
+                    { name: "Sultanato de Adel", color: 0xff6600, points: [[42, 10], [48, 12], [45, 5]], status: "Somalia", desc: "Rival de Etiopía.", fact: "Fueron los primeros africanos en usar mosquetes turcos en batalla." },
+
+                    // AMÉRICA
+                    { name: "Virreinato de Nueva España", color: 0xff8800, points: [[-110, 20], [-90, 30], [-95, 15]], status: "México", desc: "Centro del mundo.", fact: "La Ciudad de México era más grande que Madrid en esa época." },
+                    { name: "Virreinato del Perú", color: 0xeecc00, points: [[-80, -15], [-70, -10], [-75, -25]], status: "Potosí", desc: "La montaña de plata.", fact: "La plata de Potosí era tanta que se decía que se podía construir un puente de plata hasta España." },
+                    { name: "Brasil Portugués", color: 0x00aa44, points: [[-50, -10], [-35, -5], [-45, -20]], status: "Pau-Brasil", desc: "Extracción de madera.", fact: "El nombre 'Brasil' viene de un árbol que se usaba para teñir ropa de rojo." },
+                    { name: "Confederación Iroquesa", color: 0x663399, points: [[-78, 40], [-73, 45], [-75, 42]], status: "6 Naciones", desc: "Noreste de EE.UU.", fact: "Su sistema democrático inspiró parte de la Constitución de EE.UU." },
+                    { name: "Mapuches", color: 0xcc4422, points: [[-75, -40], [-70, -35], [-73, -45]], status: "La Frontera", desc: "Chile.", fact: "Fueron de los pocos pueblos indígenas que los españoles nunca pudieron conquistar." }
+                ],
+                events: [
+                    {
+                        name: "Regreso de Francis Drake",
+                        lat: 50.37, lon: -4.14,
+                        iconUrl: '⚔️',
+                        date: "Septiembre 1580",
+                        desc: "Segunda circunnavegación del mundo completada.",
+                        fact: "Drake volvió con tanto tesoro español que la Reina Isabel I pagó toda la deuda externa de Inglaterra con su parte."
+                    }
+                ]
+            },
+            {
+                year: 1648, label: "1648 - La Paz de Westfalia",
+                empires: [
+                    // EUROPA
+                    { name: "Imperio Español", color: 0xffcc00, points: [[-9, 36], [-2, 43], [3, 37]], status: "Resistencia", desc: "Siglo de Oro.", fact: "A pesar de las guerras, Velázquez pintaba 'Las Meninas' en esta época." },
+                    { name: "Francia de Luis XIV", color: 0x0000ff, points: [[-2, 44], [6, 49], [7, 43]], status: "Ascenso", desc: "El Estado soy Yo.", fact: "Luis XIV decidió que todos los nobles debían vivir con él en Versalles para que no pudieran conspirar." },
+                    { name: "Imperio Sueco", color: 0x0033aa, points: [[12, 55], [20, 65], [22, 55]], status: "Potencia del Báltico", desc: "Época de la Tempestad.", fact: "Suecia era tan poderosa que el Mar Báltico era llamado 'el lago sueco'." },
+                    { name: "Provincias Unidas (Holanda)", color: 0xff8800, points: [[4, 51], [7, 53], [6, 51]], status: "Imperio Comercial", desc: "Tulipomanía.", fact: "En esta época, un solo bulbo de tulipán podía costar más que una casa de lujo en Ámsterdam." },
+                    { name: "Imperio Austríaco", color: 0xffee00, points: [[12, 45], [18, 50], [20, 46]], status: "Habsburgo", desc: "Defensa de Europa.", fact: "Westfalia les dio independencia religiosa, permitiendo que cada príncipe eligiera su fe." },
+
+                    // ASIA
+                    { name: "Dinastía Qing", color: 0xffcc00, points: [[100, 25], [125, 45], [120, 20]], status: "Conquista Manchú", desc: "Nueva China.", fact: "Obligaron a todos los hombres chinos a llevar la coleta 'queue' bajo pena de muerte." },
+                    { name: "Imperio Mogol", color: 0x00ffcc, points: [[70, 20], [85, 32], [82, 12]], status: "Taj Mahal", desc: "Shah Jahan.", fact: "El Taj Mahal acababa de terminarse este año como el monumento al amor más caro de la historia." },
+                    { name: "Sultanato de Omán", color: 0xff4444, points: [[55, 18], [60, 24], [58, 15]], status: "Poder Naval", desc: "Señores del Índico.", fact: "Expulsaron a los portugueses y crearon un imperio que llegaba hasta Zanzíbar en África." },
+                    { name: "Shogunato Tokugawa", color: 0x1a1a1a, points: [[130, 30], [145, 45], [135, 30]], status: "Sakoku", desc: "País Cerrado.", fact: "Nadie podía entrar o salir de Japón; el contacto exterior se limitaba a una isla artificial." },
+                    { name: "Dinastía Safávida", color: 0x0044ff, points: [[45, 30], [60, 40], [55, 25]], status: "Persia", desc: "Esplendor de Isfahán.", fact: "Sus alfombras eran tan famosas que los reyes de Europa las usaban como tapices en sus paredes." },
+
+                    // ÁFRICA
+                    { name: "Sultanato de Marruecos", color: 0xcc0000, points: [[-10, 30], [-2, 35], [-5, 28]], status: "Dinastía Alauí", desc: "Independientes.", fact: "Su ejército de esclavos negros, los 'Guardias Negros', era temido en todo el Sahara." },
+                    { name: "Reino de Kasanje", color: 0x996633, points: [[15, -8], [20, -5], [18, -10]], status: "Estado Guerrero", desc: "Angola actual.", fact: "Sus guerreros no podían casarse hasta haber matado a un enemigo en batalla." },
+                    { name: "Imperio de Rozvi", color: 0x77dd77, points: [[28, -20], [33, -18], [30, -22]], status: "Señores de las Vacas", desc: "Sur de África.", fact: "Tenían una raza de perros de guerra criados específicamente para proteger el ganado de los leones." },
+                    { name: "Sultanato de Sennar", color: 0x8b4513, points: [[30, 12], [35, 16], [33, 10]], status: "Sudán", desc: "Reino de los Fung.", fact: "Su moneda oficial eran los trozos de tela de algodón llamados 'Dammur'." },
+                    { name: "Reino de Merina", color: 0xff88ff, points: [[45, -15], [50, -20], [47, -25]], status: "Madagascar", desc: "Aislamiento insular.", fact: "El rey de la isla se consideraba el dueño de todas las almas, las de los vivos y las de los muertos." },
+
+                    // AMÉRICA
+                    { name: "Colonias de Nueva Inglaterra", color: 0xcc0000, points: [[-75, 40], [-68, 48], [-70, 42]], status: "Peregrinos", desc: "Costa Este.", fact: "Boston era un pueblo de apenas 2.000 personas rodeado de bosques salvajes." },
+                    { name: "Virreinato de Nueva España", color: 0xff8800, points: [[-110, 20], [-90, 30], [-95, 15]], status: "Barroco Mexicano", desc: "México.", fact: "Sor Juana Inés de la Cruz, la mayor poeta de América, nació precisamente en estos años." },
+                    { name: "Virreinato del Perú", color: 0xeecc00, points: [[-80, -15], [-70, -10], [-75, -25]], status: "Plata y Oro", desc: "Andes.", fact: "Lima era llamada 'La Ciudad de los Reyes' y era el centro del lujo en todo el Pacífico." },
+                    { name: "Brasil (Guerra Holandesa)", color: 0x00aa44, points: [[-45, -10], [-35, -5], [-40, -15]], status: "Expulsión", desc: "Recuperación portuguesa.", fact: "Este año los brasileños ganaron la batalla de Guararapes, echando a los holandeses para siempre." },
+                    { name: "Naciones Huronas", color: 0x663399, points: [[-82, 45], [-76, 48], [-78, 45]], status: "Confederación", desc: "Canadá.", fact: "Eran los mayores comerciantes de pieles de castor, que luego se convertían en sombreros en París." }
+                ],
+                events: [
+                    {
+                        name: "Tratados de Westfalia",
+                        lat: 51.96, lon: 7.62,
+                        iconUrl: '📜',
+                        date: "24 Octubre 1648",
+                        desc: "El nacimiento del concepto de 'Estado-Nación' moderno.",
+                        fact: "Puso fin a la Guerra de los 30 años, que fue tan brutal que algunas partes de Alemania perdieron al 50% de su población."
+                    }
+                ]
+            },
+            {
+                year: 1715, label: "1715 - La Era de la Ilustración",
+                empires: [
+                    // EUROPA
+                    { name: "Reino de Francia", color: 0x0000ff, points: [[-5, 44], [8, 50], [7, 43]], status: "Rey Sol", desc: "Luis XIV y el absolutismo.", fact: "En Versalles, el Rey Sol tenía un 'relojero de pelucas' personal. ¡Tenía más de 1.000!" },
+                    { name: "Imperio Británico", color: 0xcc0000, points: [[-6, 50], [2, 58], [2, 50]], status: "Ascenso Naval", desc: "Tras la Unión de 1707.", fact: "Londres era tan humeante por el carbón que inventaron los paraguas no solo para la lluvia, sino para el hollín." },
+                    { name: "Prusia", color: 0x444444, points: [[10, 50], [18, 54], [15, 52]], status: "Estado Cuartel", desc: "El ejército con un país.", fact: "Los reyes prusianos tenían una guardia de 'Gigantes de Potsdam': soldados que debían medir más de 1,90m." },
+                    { name: "Monarquía Habsburgo", color: 0xffee00, points: [[12, 45], [20, 50], [18, 45]], status: "Viena", desc: "Corazón del Danubio.", fact: "Fue en esta época cuando el café se volvió la bebida de moda en Viena tras quitárselo a los turcos." },
+                    { name: "Suecia (Imperio)", color: 0x0033aa, points: [[10, 55], [25, 70], [20, 55]], status: "Poder del Báltico", desc: "La era de Carlos XII.", fact: "Sus soldados, los Caroleanos, tenían prohibido retirarse; debían avanzar siempre, incluso bajo fuego total." },
+                    // ASIA
+                    { name: "Dinastía Qing", color: 0xffcc00, points: [[95, 45], [130, 50], [120, 20], [100, 20]], status: "Máxima Extensión", desc: "China bajo los manchúes.", fact: "El emperador Kangxi escribía poemas mientras cazaba tigres en la estepa." },
+                    { name: "Shogunato Tokugawa", color: 0x1a1a1a, points: [[130, 30], [145, 45], [135, 30]], status: "Edo (Tokio)", desc: "Japón cerrado al mundo.", fact: "Si un plebeyo no se inclinaba ante un samurai, este tenía permiso legal para cortarle la cabeza allí mismo." },
+                    { name: "Imperio Mogol", color: 0x00ffcc, points: [[65, 30], [90, 30], [80, 10]], status: "Declive lento", desc: "India post-Aurangzeb.", fact: "Poseían el diamante Koh-i-Noor, que hoy está en la corona de la Reina de Inglaterra." },
+                    { name: "Imperio Afsharida", color: 0x0044ff, points: [[45, 30], [65, 40], [55, 25]], status: "Persia Militar", desc: "Nadir Shah, el Napoleón persa.", fact: "Nadir Shah invadió la India y se llevó el Trono del Pavo Real, hecho de oro sólido y gemas." },
+                    { name: "Siam (Ayutthaya)", color: 0xccaa00, points: [[98, 13], [102, 15], [101, 10]], status: "Tailandia Antigua", desc: "Centro de comercio asiático.", fact: "Los reyes tenían 'Elefantes Blancos' sagrados; si moría uno, todo el reino guardaba luto nacional." },
+                    // ÁFRICA
+                    { name: "Imperio Asante", color: 0xffaa00, points: [[-3, 5], [2, 8], [0, 5]], status: "Trono de Oro", desc: "Actual Ghana.", fact: "Su símbolo de poder era un taburete de oro puro que, según decían, bajó del cielo." },
+                    { name: "Imperio de Oyo", color: 0x996633, points: [[3, 7], [8, 9], [5, 6]], status: "Caballería Yoruba", desc: "Nigeria.", fact: "Eran famosos por sus 'Eunucos Reales' que actuaban como espías y diplomáticos." },
+                    { name: "Reino de Dahomey", color: 0xaa0000, points: [[1, 6], [4, 8], [3, 5]], status: "Amazonas Africanas", desc: "Benín.", fact: "Tenían un ejército de mujeres guerreras de élite que inspiraron a las Dora Milaje de Black Panther." },
+                    { name: "Argel (Regencia)", color: 0x006622, points: [[0, 32], [5, 37], [8, 32]], status: "Corsarios", desc: "Piratas berberiscos.", fact: "Sus barcos llegaban hasta Islandia para capturar gente y venderla en el Mediterráneo." },
+                    { name: "Sultanato de Funj", color: 0x8b4513, points: [[30, 12], [35, 15], [33, 10]], status: "Sudán", desc: "El Reino Negro.", fact: "Sus jinetes llevaban armaduras de malla completas, incluso en el calor sofocante del desierto." },
+                    // AMÉRICA
+                    { name: "13 Colonias", color: 0x000088, points: [[-80, 30], [-70, 45], [-75, 40]], status: "Futuro EE.UU.", desc: "Bajo dominio británico.", fact: "La gente bebía más cerveza que agua porque el agua solía estar contaminada." },
+                    { name: "Virreinato del Río de la Plata", color: 0x75bbee, points: [[-65, -35], [-55, -30], [-60, -40]], status: "Buenos Aires", desc: "Control del sur.", fact: "El nombre 'Argentina' viene de 'Argentum' (plata), aunque allí casi no había minas de plata." },
+                    { name: "Imperio Comanche", color: 0x884422, points: [[-105, 30], [-95, 35], [-100, 32]], status: "Señores del Sur", desc: "Dominio de las llanuras.", fact: "Eran los mejores jinetes del mundo; podían disparar flechas colgados del costado del caballo para cubrirse." },
+                    { name: "Naciones Guaraníes", color: 0x00aa44, points: [[-58, -25], [-50, -20], [-55, -30]], status: "Misiones", desc: "Paraguay/Brasil.", fact: "Crearon las primeras orquestas de música barroca en plena selva amazónica." },
+                    { name: "Reino de la Mosquitia", color: 0x008888, points: [[-85, 13], [-82, 15], [-83, 12]], status: "Costa Caribe", desc: "Nicaragua/Honduras.", fact: "Su rey era coronado en Jamaica con una ceremonia británica de lo más extraña." }
+                ],
+                events: [
+                    {
+                        name: "Piratería en Nassau",
+                        lat: 25.04, lon: -77.34,
+                        iconUrl: '🏴‍☠️',
+                        date: "1715-1718",
+                        desc: "La 'República de los Piratas' alcanza su cénit.",
+                        fact: "Tras el hundimiento de la Flota de la Plata española en Florida (1715), miles de piratas como Barbanegra se lanzaron al Caribe."
+                    }
+                ]
+            },
+            {
+                year: 1914, label: "1914 - El Estallido del Siglo XX",
+                empires: [
+                    // EUROPA
+                    { name: "Imperio Alemán", color: 0x333333, points: [[6, 50], [20, 55], [18, 48]], status: "II Reich", desc: "Potencia industrial.", fact: "¡Tenían los mejores químicos del mundo! Inventaron la aspirina y los tintes sintéticos." },
+                    { name: "Imperio Austro-Húngaro", color: 0xcc0000, points: [[12, 45], [25, 50], [22, 42]], status: "Imperio Dual", desc: "Mosaico de naciones.", fact: "Su emperador Francisco José se despertaba a las 4:00 AM todos los días para trabajar en su despacho." },
+                    { name: "Imperio Británico", color: 0xff0000, points: [[-10, 50], [2, 60], [2, 50]], status: "Dominio Global", desc: "La era de los Dreadnoughts.", fact: "Controlaban 1/4 de la población mundial; por eso casi todo el mundo habla inglés hoy." },
+                    { name: "Imperio Ruso", color: 0x00cc44, points: [[30, 50], [60, 65], [60, 40]], status: "Zar Nicolás II", desc: "El gigante herido.", fact: "La familia real era tan rica que los huevos de Pascua (Fabergé) eran de oro y diamantes." },
+                    { name: "Imperio Otomano", color: 0x006622, points: [[25, 35], [40, 45], [45, 30]], status: "El Enfermo de Europa", desc: "Últimos años de los Sultanes.", fact: "Estaban construyendo un tren que iría desde Berlín hasta Bagdad." },
+                    // ASIA
+                    { name: "Imperio del Japón", color: 0xffffff, points: [[130, 30], [145, 50], [140, 30]], status: "Meiji/Taisho", desc: "Industrialización relámpago.", fact: "Pasaron de ser samuráis con espadas a tener una flota moderna en solo 40 años." },
+                    { name: "Raj Británico", color: 0xff88aa, points: [[70, 20], [90, 30], [80, 10]], status: "India Colonial", desc: "La joya de la corona.", fact: "Los británicos construyeron miles de km de tren para sacar el té y el algodón hacia los puertos." },
+                    { name: "Siam (Tailandia)", color: 0xccaa00, points: [[98, 13], [105, 18], [100, 10]], status: "Estado Independiente", desc: "Único país del sudeste asiático no colonizado.", fact: "Su rey envió elefantes de regalo al presidente de EE.UU. Abraham Lincoln para ayudar en su guerra." },
+                    { name: "República de China", color: 0x0000ff, points: [[100, 25], [120, 40], [110, 25]], status: "Post-Dinastía", desc: "Sun Yat-sen.", fact: "El último emperador de China acabó trabajando como jardinero después de la revolución." },
+                    { name: "Emirato de Nejd", color: 0x008844, points: [[40, 20], [50, 25], [45, 18]], status: "Arabia Saudí (Inicios)", desc: "Unificación árabe.", fact: "Ibn Saud conquistó su capital, Riad, con solo 40 hombres en un ataque nocturno sorpresa." },
+                    // ÁFRICA
+                    { name: "Etiopía (Abisinia)", color: 0x00ff00, points: [[35, 8], [42, 12], [40, 5]], status: "Independiente", desc: "Único estado africano libre.", fact: "Derrotaron a Italia en la batalla de Adwa gracias a que tenían fusiles modernos rusos y franceses." },
+                    { name: "Unión Sudafricana", color: 0xffaa00, points: [[18, -30], [30, -25], [25, -35]], status: "Dominio Británico", desc: "Oro y Diamantes.", fact: "Se descubrió el diamante Cullinan, el más grande del mundo, ¡era del tamaño de un corazón humano!" },
+                    { name: "África Occidental Francesa", color: 0x0000ff, points: [[-15, 15], [10, 20], [5, 5]], status: "Colonia", desc: "Dakar como centro.", fact: "Los 'Tiradores Senegaleses' fueron soldados clave que lucharon en las trincheras de Europa." },
+                    { name: "Egipto (Khedivato)", color: 0x00ffff, points: [[25, 25], [35, 32], [32, 22]], status: "Canal de Suez", desc: "Bajo influencia británica.", fact: "La inauguración del Canal de Suez fue tan lujosa que encargaron la ópera 'Aida' a Verdi." },
+                    { name: "Congo Belga", color: 0xffff00, points: [[15, 0], [25, 5], [20, -10]], status: "Colonia de Leopoldo II", desc: "Caucho y marfil.", fact: "Era una propiedad privada del Rey de Bélgica, no del país de Bélgica." },
+                    // AMÉRICA
+                    { name: "Estados Unidos", color: 0x0000aa, points: [[-125, 30], [-70, 50], [-90, 30]], status: "Potencia Emergente", desc: "La era del acero.", fact: "En 1914, Henry Ford ya fabricaba un coche (Modelo T) cada 93 minutos." },
+                    { name: "Brasil (Vieja República)", color: 0x00aa44, points: [[-60, -10], [-40, 0], [-50, -25]], status: "Café com Leite", desc: "Dominio de terratenientes.", fact: "Brasil producía el 80% del café de todo el planeta en ese momento." },
+                    { name: "Argentina (Edad de Oro)", color: 0x75bbee, points: [[-70, -35], [-60, -25], [-65, -55]], status: "Granero del Mundo", desc: "Uno de los países más ricos.", fact: "Buenos Aires tenía el primer metro (Subte) de todo el hemisferio sur." },
+                    { name: "México (Revolución)", color: 0x228822, points: [[-110, 20], [-95, 30], [-100, 15]], status: "Pancho Villa / Zapata", desc: "Guerra civil agraria.", fact: "Fue la primera guerra de la historia capturada masivamente por cámaras de cine." },
+                    { name: "Canadá (Dominio)", color: 0xff4444, points: [[-120, 50], [-60, 60], [-80, 45]], status: "Commonwealth", desc: "Apoyo a Gran Bretaña.", fact: "Inventaron el baloncesto y el hockey sobre hielo casi al mismo tiempo." }
+                ],
+                events: [
+                    {
+                        name: "Atentado de Sarajevo",
+                        lat: 43.85, lon: 18.41,
+                        iconUrl: '🧨',
+                        date: "28 Junio 1914",
+                        desc: "Asesinato del archiduque Francisco Fernando.",
+                        fact: "El asesino, Gavrilo Princip, estaba comiendo un sándwich cuando el coche del archiduque se detuvo por error justo frente a él."
+                    }
+                ]
+            },
+            {
+                year: 1960,
+                label: "1960 - Guerra Fría",
+                empires: [
+                    {
+                        name: "Unión Soviética",
+                        color: 0xcc0000,
+                        points: [[30, 45], [40, 170], [75, 170], [80, 40], [50, 30]],
+                        status: "Bloque Este",
+                        desc: "Superpotencia socialista en su apogeo bajo Jrushchov.",
+                        fact: "En 1960, el Sputnik 5 llevó a las perras Belka y Strelka al espacio y las trajo vivas."
+                    },
+                    {
+                        name: "Estados Unidos (OTAN)",
+                        color: 0x0033cc,
+                        points: [[-125, 25], [-125, 49], [-67, 49], [-67, 25]],
+                        status: "Bloque Oeste",
+                        desc: "Líder del mundo capitalista y la OTAN.",
+                        fact: "En 1960 se realizaron los primeros debates presidenciales televisados (Kennedy vs Nixon)."
+                    },
+                    {
+                        name: "China Popular",
+                        color: 0xffcc00,
+                        points: [[75, 20], [130, 20], [130, 50], [75, 50]],
+                        status: "Comunismo Asiático",
+                        desc: "Bajo el mando de Mao Zedong tras el Gran Salto Adelante.",
+                        fact: "1960 marcó el inicio de la ruptura sino-soviética por diferencias ideológicas."
+                    },
+                    {
+                        name: "Imperio Colonial Francés",
+                        color: 0x228b22,
+                        points: [[-17, 10], [20, 10], [20, 35], [-5, 35], [-17, 15]],
+                        status: "Descolonización",
+                        desc: "Últimos coletazos del imperio en África y el Magreb.",
+                        fact: "1960 es conocido como el 'Año de África' porque 17 naciones africanas se independizaron de Francia."
+                    },
+                    {
+                        name: "Commonwealth Británica",
+                        color: 0xff69b4,
+                        points: [[110, -10], [155, -10], [155, -40], [110, -40]], // Foco en Australia/Asia
+                        status: "Post-Imperio",
+                        desc: "Transformación del Imperio en una asociación de naciones libres.",
+                        fact: "Nigeria se independizó del Reino Unido en octubre de este mismo año."
+                    }
+                ],
+                events: [
+                    {
+                        name: "Crisis de los U-2",
+                        lat: 56.12, lon: 60.62,
+                        iconUrl: '🛩️',
+                        date: "1 de mayo, 1960",
+                        desc: "Un avión espía de EE.UU. es derribado sobre la URSS.",
+                        fact: "El piloto Gary Powers fue capturado y luego canjeado por un espía soviético."
+                    },
+                    {
+                        name: "Independencia de África",
+                        lat: 5.34, lon: -4.02,
+                        iconUrl: '🌍',
+                        date: "1960",
+                        desc: "Ola masiva de descolonización en el continente africano.",
+                        fact: "Camerún, Senegal, Togo y Nigeria, entre otros, nacieron como estados modernos este año."
+                    }
+                ]
+            },
+            {
+                year: 2024, label: "2024 - El Mundo Contemporáneo",
+                empires: [
+                    // EUROPA
+                    { name: "Unión Europea", color: 0x003399, points: [[-10, 40], [25, 55], [20, 40], [0, 40]], status: "Paz Democrática", desc: "27 naciones unidas.", fact: "¡Puedes viajar de Portugal a Finlandia sin enseñar el pasaporte ni una sola vez!" },
+                    { name: "Reino Unido", color: 0xcc0000, points: [[-8, 50], [2, 58], [2, 50]], status: "Post-Brexit", desc: "Poder financiero.", fact: "El Big Ben no es la torre, ¡es solo el nombre de la campana gigante que hay dentro!" },
+                    { name: "Rusia", color: 0x006622, points: [[30, 55], [170, 70], [170, 45], [40, 40]], status: "Federación", desc: "El país más grande.", fact: "Tiene 11 zonas horarias. ¡Cuando en un lado desayunan, en el otro están cenando!" },
+                    { name: "Noruega", color: 0xdd0000, points: [[5, 60], [15, 70], [10, 60]], status: "Fondo Soberano", desc: "El país más estable.", fact: "Tienen tanto dinero ahorrado del petróleo que cada noruego es técnicamente millonario." },
+                    { name: "Ucrania", color: 0xffee00, points: [[25, 45], [35, 50], [35, 45]], status: "Resistencia", desc: "Granero de Europa.", fact: "Es el país que produce más girasoles y aceite de girasol en todo el mundo." },
+                    // ASIA
+                    { name: "China", color: 0xaa0000, points: [[80, 25], [125, 45], [120, 20]], status: "Superpotencia", desc: "Líder tecnológico.", fact: "Tienen trenes de levitación magnética que van a 600 km/h. ¡Vuelan sobre la vía!" },
+                    { name: "India", color: 0xff8800, points: [[70, 10], [90, 30], [80, 10]], status: "País más poblado", desc: "Gigante demográfico.", fact: "Envían misiones a la Luna y Marte con un presupuesto menor que lo que costó la película 'Interstellar'." },
+                    { name: "Japón", color: 0xffffff, points: [[130, 30], [145, 45], [140, 30]], status: "Robótica", desc: "Sociedad envejecida.", fact: "Hay más máquinas expendedoras en Japón que personas en muchos países pequeños." },
+                    { name: "Arabia Saudí", color: 0x006622, points: [[35, 20], [50, 28], [45, 18]], status: "Visión 2030", desc: "Reforma económica.", fact: "Están construyendo 'The Line', una ciudad de 170 km de largo en línea recta en el desierto." },
+                    { name: "Corea del Sur", color: 0x0000ff, points: [[126, 35], [129, 38], [128, 34]], status: "K-Culture", desc: "Líder en microchips.", fact: "Tienen el internet más rápido del mundo desde hace más de una década." },
+                    // ÁFRICA
+                    { name: "Nigeria", color: 0x006622, points: [[3, 6], [14, 14], [8, 5]], status: "Gigante de África", desc: "Mayor economía africana.", fact: "Su industria del cine, Nollywood, produce más películas al año que Hollywood." },
+                    { name: "Etiopía", color: 0x00aa44, points: [[34, 5], [45, 12], [40, 4]], status: "Hub Africano", desc: "Crecimiento rápido.", fact: "Siguen su propio calendario de 13 meses. ¡Para ellos es el año 2016!" },
+                    { name: "Sudáfrica", color: 0xffcc00, points: [[18, -34], [32, -25], [25, -30]], status: "BRICS", desc: "Nación arcoíris.", fact: "Es el único país del mundo que tiene 3 capitales diferentes (una para cada poder del estado)." },
+                    { name: "Egipto", color: 0x000000, points: [[25, 25], [35, 32], [32, 22]], status: "Nueva Capital", desc: "Modernización.", fact: "Están construyendo una ciudad entera en el desierto para que sea la nueva capital porque El Cairo está lleno." },
+                    { name: "Marruecos", color: 0xcc0000, points: [[-10, 30], [-2, 35], [-5, 28]], status: "Energía Solar", desc: "Líder en renovables.", fact: "Tienen una de las plantas solares más grandes del mundo, visible desde el espacio." },
+                    // AMÉRICA
+                    { name: "Estados Unidos", color: 0x0000ff, points: [[-125, 30], [-70, 48], [-90, 30]], status: "Potencia Militar", desc: "Silicon Valley / Wall Street.", fact: "Solo la economía del estado de California es más grande que la de la mayoría de países de Europa." },
+                    { name: "Brasil", color: 0x009944, points: [[-70, -10], [-35, -5], [-50, -30]], status: "Pulmón del Mundo", desc: "Poder agrícola.", fact: "Es el país con mayor biodiversidad del planeta; hay tribus en el Amazonas que aún no han sido contactadas." },
+                    { name: "Canadá", color: 0xff0000, points: [[-130, 50], [-60, 70], [-80, 45]], status: "Multiculturalismo", desc: "Recursos naturales.", fact: "Tienen más lagos que el resto de los países del mundo juntos." },
+                    { name: "México", color: 0x006622, points: [[-115, 20], [-90, 32], [-100, 15]], status: "Nearshoring", desc: "Potencia manufacturera.", fact: "La Ciudad de México se está hundiendo unos 10-12 cm al año porque fue construida sobre un lago." },
+                    { name: "Chile", color: 0xff0000, points: [[-75, -30], [-68, -20], [-72, -55]], status: "Cobre y Litio", desc: "Economía estable.", fact: "Tienen el lugar más seco de la Tierra (Desierto de Atacama), donde hay zonas donde nunca se ha registrado lluvia." }
+                ],
+                events: [
+                    { name: "Estación Espacial Internacional", lat: 0, lon: 0, iconUrl: '🏠', date: "Actualidad", desc: "Laboratorio de investigación en órbita terrestre baja.", fact: "Es el objeto individual más caro jamás construido por la humanidad." },
+                    {
+                        name: "Exploración de Marte (Perseverance)",
+                        lat: 18.4, lon: 77.5, // Coordenadas simbólicas en el planeta Tierra (Cabo Cañaveral)
+                        iconUrl: '🚀',
+                        date: "Actualidad",
+                        desc: "Búsqueda de vida antigua en el cráter Jezero.",
+                        fact: "El rover lleva un pequeño helicóptero llamado Ingenuity, el primer objeto en volar en otro planeta."
+                    }
+                ]
+            }
+        ];
+
+        // --- VARIABLES DE ESTADO GLOBALES ---
+        let currentEmpiresData = [];
+        let currentEventsData = []; // [NUEVO]
+        const raycaster = new THREE.Raycaster();
+        const tooltip = document.getElementById('tooltip');
+
+        // --- FUNCIÓN PRINCIPAL DE RENDERIZADO POR AÑO ---
+        function renderYear(year) {
+            empiresGroup.clear();
+            eventsGroup.clear(); // [NUEVO] Limpiar eventos anteriores
+
+            // Buscar los datos más cercanos al año seleccionado
+            const data = timeline.reduce((p, c) => Math.abs(c.year - year) < Math.abs(p.year - year) ? c : p);
+
+            // Actualizar UI y variables de estado
+            document.getElementById('year-display').innerText = data.label;
+            currentEmpiresData = data.empires;
+            currentEventsData = data.events || [];
+
+            // --- PUNTO 1: MODO NOCHE DINÁMICO ---
+            if (year >= 2023) {
+                // 1. Fondo de la escena a Negro Absoluto (Cero tintes)
+                scene.background = new THREE.Color(0x000000);
+                if (scene.fog) scene.fog = null;
+
+                globe.material = new THREE.MeshBasicMaterial({
+                    map: textureNight,
+                    transparent: false,
+                    opacity: 0.8,
+                    color: 0xaaaaaa,
+                    blending: THREE.NoBlending
+                });
+
+            } else {
+                // --- RESET MODO DÍA ---
+                scene.background = new THREE.Color(0x050508); // Tu color oscuro original
+                globe.material = globeMaterial; // Volvemos al material con luces
+                globeMaterial.map = textureDay;
+
+                // Volvemos a hacer todo visible
+                scene.traverse((obj) => { obj.visible = true; });
+                empiresGroup.visible = true;
+            }
+            globeMaterial.needsUpdate = true;
+
+
+            // --- RENDERIZAR IMPERIOS (ÁREAS) ---
+            // (Tu código existente que ya funciona 'que te cagas')
+            data.empires.forEach(emp => {
+                const lats = emp.points.map(p => p[1]);
+                const lons = emp.points.map(p => p[0]);
+                const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+                const minLon = Math.min(...lons), maxLon = Math.max(...lons);
+
+                const geo = new THREE.SphereGeometry(1.02, 32, 32,
+                    (minLon + 180) * Math.PI / 180, (maxLon - minLon) * Math.PI / 180,
+                    (90 - maxLat) * Math.PI / 180, (maxLat - minLat) * Math.PI / 180
+                );
+
+                const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: emp.color, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
+                mesh.renderOrder = 10;
+                // Guardamos info para el raycaster 2D
+                mesh.userData = { type: 'empire', data: emp };
+
+                const edgePts = [...emp.points, emp.points[0]].map(p => latLonToVec3(p[1], p[0], 1.025));
+                const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(edgePts), new THREE.LineBasicMaterial({ color: emp.color }));
+                line.renderOrder = 11;
+
+                empiresGroup.add(mesh);
+                empiresGroup.add(line);
+            });
+
+            // --- PUNTO 2: RENDERIZAR EVENTOS GLOBALES (PUNTOS) [NUEVO] ---
+            // --- PUNTO 2: RENDERIZAR EVENTOS GLOBALES (PINS ROJOS) ---
+            // --- PUNTO 2: RENDERIZAR EVENTOS GLOBALES (PIN ROJO CORREGIDO) ---
+            if (data.events) {
+                data.events.forEach(evt => {
+                    const pinGroup = new THREE.Group();
+                    const redMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+
+                    // 1. El cono (Punta hacia abajo)
+                    const tipGeo = new THREE.ConeGeometry(0.012, 0.03, 16);
+                    const tip = new THREE.Mesh(tipGeo, redMat);
+
+                    // ROTACIÓN CLAVE: Invertimos el cono 180 grados para que el pico mire abajo
+                    tip.rotation.x = Math.PI;
+                    // Lo subimos la mitad de su altura para que el pico quede en el 0,0,0 local
+                    tip.position.y = 0.013;
+                    pinGroup.add(tip);
+
+                    // 2. La cabeza (Esfera arriba)
+                    const headGeo = new THREE.SphereGeometry(0.012, 16, 16);
+                    const head = new THREE.Mesh(headGeo, redMat);
+                    // La colocamos en la base ancha del cono (que ahora está arriba)
+                    head.position.y = 0.03;
+                    pinGroup.add(head);
+
+                    // 3. Posicionamiento en el globo
+                    const pos = latLonToVec3(evt.lat, evt.lon, 1.01);
+                    pinGroup.position.copy(pos);
+
+                    // 4. Orientación: El grupo debe mirar hacia afuera del globo
+                    // Usamos una dirección que vaya desde el centro de la tierra hacia la posición del pin
+                    const direction = pos.clone().normalize();
+                    const targetPos = pos.clone().add(direction);
+                    pinGroup.lookAt(targetPos);
+
+                    // Ajuste final de eje para que el "arriba" del pin coincida con el "afuera" del globo
+                    pinGroup.rotateX(Math.PI / 2);
+
+                    // 5. Datos para el Raycaster
+                    head.userData = { type: 'event', data: evt };
+                    tip.userData = { type: 'event', data: evt };
+
+                    eventsGroup.add(pinGroup);
+                });
+            }
+        }
+
+        // --- INTERACCIÓN (MouseMove / Hover) ACTUALIZADA [NUEVO] ---
+        window.addEventListener('mousemove', (event) => {
+            const mouse = new THREE.Vector2(
+                (event.clientX / window.innerWidth) * 2 - 1,
+                -(event.clientY / window.innerHeight) * 2 + 1
+            );
+            raycaster.setFromCamera(mouse, camera);
+
+            // Ocultar tooltip por defecto
+            tooltip.style.display = 'none';
+            tooltip.className = ''; // Limpiar clases especiales
+
+            // 1. Detección Prioritaria: Eventos Globales (Raycasting 3D directo sobre los marcadores)
+            const eventIntersects = raycaster.intersectObjects(eventsGroup.children);
+
+            if (eventIntersects.length > 0) {
+                const evtData = eventIntersects[0].object.userData.data;
+
+                tooltip.style.display = 'block';
+                tooltip.style.left = (event.clientX + 20) + 'px';
+                tooltip.style.top = (event.clientY + 20) + 'px';
+                tooltip.className = 'event-tooltip'; // Aplicar estilo Cyan
+
+                tooltip.innerHTML = `
+                <div class="event-tag">${evtData.iconUrl} EVENTO GLOBAL</div>
+                <h3>${evtData.name}</h3>
+                <p style="color: #00bcd4; font-weight: bold; font-size: 0.8rem; margin-bottom: 5px;">${evtData.date}</p>
+                <p style="color: #eee; margin-bottom: 10px;">${evtData.desc}</p>
+                <div style="background: rgba(0,188,212,0.1); border-left: 3px solid #00bcd4; padding: 8px;">
+                    <p style="font-style: italic; font-size: 0.8rem; color: #fff; margin:0;">${evtData.fact}</p>
+                </div>
+            `;
+                return; // Si encontramos evento, no buscamos imperio
+            }
+
+            // 2. Detección Secundaria: Imperios (Cálculo 2D lat/lon sobre el globo)
+            const globeIntersects = raycaster.intersectObject(globe);
+
+            if (globeIntersects.length > 0) {
+                const p = globeIntersects[0].point.clone().normalize();
+                const lat = Math.asin(p.y) * (180 / Math.PI);
+                // Matemática blindada que ya te funciona
+                let lon = Math.atan2(-p.z, p.x) * (180 / Math.PI);
+
+                // Buscar en el array de imperios actuales
+                const found = currentEmpiresData.find(emp => isPointInPoly([lon, lat], emp.points));
+
+                if (found) {
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = (event.clientX + 20) + 'px';
+                    tooltip.style.top = (event.clientY + 20) + 'px';
+
+                    // Usamos tu innerHTML original que te funciona 'que te cagas'
+                    tooltip.innerHTML = `
+                    <div style="border-left: 4px solid ${'#' + found.color.toString(16).padStart(6, '0')}; padding-left: 10px;">
+                        <span class="tag">${found.status}</span>
+                        <h3 style="margin: 2px 0; color: #ff9800;">${found.name}</h3>
+                        <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 8px;">${found.desc}</p>
+                        <div style="background: rgba(255,152,0,0.1); padding: 10px; border: 1px solid rgba(255,152,0,0.3); border-radius: 4px;">
+                            <strong style="color: #ff9800; font-size: 0.7rem; display: block; margin-bottom: 3px;">💡 DATO CURIOSO</strong>
+                            <p style="font-style: italic; font-size: 0.85rem; margin: 0; color: #fff;">${found.fact}</p>
+                        </div>
+                    </div>
+                `;
+                }
+            }
+        });
+
+        // --- EVENTOS DE UI ---
+        document.getElementById('year-slider').addEventListener('input', (e) => {
+            renderYear(parseInt(e.target.value));
+        });
+
+        // --- BUCLE DE ANIMACIÓN ---
+        function animate() {
+            requestAnimationFrame(animate);
+            // Las nubes solo rotan si están visibles (Modo Día)
+            if (cloudMesh.visible) {
+                cloudMesh.rotation.y += 0.0001;
+            }
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // --- INICIO ---
+        // Asegúrate de que el slider tenga el rango correcto: min="117" max="2024"
+        renderYear(117);
+        animate();
+
+    </script>
+</body>
+
+</html>
