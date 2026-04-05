@@ -3,8 +3,10 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ChronosGlobe: El Mundo Histórico</title>
     <style>
+        /* checkpoint */
         body {
             margin: 0;
             overflow: hidden;
@@ -12,17 +14,24 @@
             font-family: 'Segoe UI', sans-serif;
         }
 
+        /* Contenedor de la barra de años superior */
         #ui-container {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 10;
-            background: rgba(0, 0, 0, 0.9);
-            padding: 25px;
-            border-radius: 15px;
-            border-left: 5px solid #ff9800;
-            color: white;
-            width: 320px;
+            top: 30px;
+            /* Padding desde arriba */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            border-radius: 20px;
+            z-index: 100;
+            border: 1px solid rgba(255, 152, 0, 0.2);
         }
 
         #year-slider {
@@ -47,9 +56,14 @@
             border: 1px solid #ff9800;
             border-radius: 10px;
             pointer-events: none;
-            width: 300px;
             z-index: 100;
             box-shadow: 0 5px 25px rgba(0, 0, 0, 0.8);
+
+            @media(max-width: 768px) {
+                box-sizing: border-box;
+                max-width: calc(100vw - 20px);
+                width: 300px;
+            }
         }
 
         h3 {
@@ -75,24 +89,47 @@
             margin: 0;
         }
 
-        .event-tooltip {
-            border-color: #ff4444 !important;
-            background: rgba(30, 0, 0, 0.98) !important;
+        /* Panel de Información Lateral */
+        #info-panel {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            /* Padding desde la derecha */
+            width: 320px;
+            background: rgba(10, 10, 10, 0.95);
+            padding: 25px;
+            /* Más padding interno para legibilidad */
+            border-radius: 15px;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
         }
 
-        .event-tooltip h3 {
-            color: #ff4444 !important;
-        }
+        /* --- AJUSTES PARA MÓVIL --- */
+        @media (max-width: 768px) {
+            #ui-container {
+                top: 10px;
+                padding: 10px;
+            }
 
-        .event-tag {
-            background: #ff4444;
-            color: white;
-            font-size: 0.7rem;
-            font-weight: bold;
-            padding: 2px 5px;
-            border-radius: 3px;
-            margin-bottom: 8px;
-            display: inline-block;
+            .year-label {
+                font-size: 1.5rem;
+            }
+
+            #info-panel {
+                right: 5%;
+                left: 5%;
+                /* Centrado en móvil */
+                width: 90%;
+                bottom: 20px;
+                padding: 20px;
+                box-sizing: border-box;
+                /* Evita que el panel se salga por los lados */
+                max-height: 40vh;
+                /* Para que no tape toda la pantalla */
+                overflow-y: auto;
+            }
         }
     </style>
 </head>
@@ -101,7 +138,7 @@
 
     <div id="ui-container">
         <span class="year-label" id="year-display">117 d.C.</span>
-        <input type="range" id="year-slider" min="117" max="2024" value="117">
+        <input type="range" id="year-slider" min="-8000" max="2026" value="117">
     </div>
     <div id="tooltip"></div>
 
@@ -135,7 +172,7 @@
 
         // --- CARGA DE TEXTURAS ---
         const loader = new THREE.TextureLoader();
-        const textureDay = loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg');
+        const textureDay = loader.load('earth_texture.jpg');
         // Textura de luces nocturnas
         const textureNight = loader.load('8k_earth_nightmap.jpg');
         // --- GLOBO ---
@@ -203,8 +240,351 @@
         }
 
         // --- DATOS HISTÓRICOS (Timeline) ---
-        // Asegúrate de usar AQUÍ tu timeline completo. He reducido este para el ejemplo.
         const timeline = [
+            {
+                year: -8000, label: "8000 a.C. - El Amanecer del Neolítico",
+                empires: [
+                    // ORIENTE PRÓXIMO
+                    {
+                        name: "Creciente Fértil", color: 0x99ff99, points: [[35, 30], [45, 35], [50, 30], [40, 25]],
+                        status: "Cuna de la Humanidad",
+                        desc: "Región pionera donde los humanos pasaron de la caza a la vida sedentaria, creando los primeros cultivos de trigo y cebada.",
+                        fact: "Aquí se inventó la cerámica para almacenar excedentes y se fermentó la primera cerveza de la historia."
+                    },
+
+                    // ASIA
+                    {
+                        name: "Culturas del Río Amarillo", color: 0xffeb3b, points: [[110, 35], [115, 38], [112, 32]],
+                        status: "Proto-China Septentrional",
+                        desc: "Primeras aldeas permanentes basadas en el cultivo del mijo y la domesticación de animales en el norte de Asia.",
+                        fact: "Fueron de los primeros en el mundo en domesticar cerdos y perros para ayudar en la vida diaria de la aldea."
+                    },
+                    {
+                        name: "Cultura Pengtoushan", color: 0xffeb3b, points: [[112, 28], [118, 30], [115, 25]],
+                        status: "Sociedad del Arroz",
+                        desc: "Comunidades avanzadas del Valle del Yangtsé que desarrollaron las técnicas de riego necesarias para el cultivo masivo de arroz.",
+                        fact: "Sus herramientas de piedra pulida eran extremadamente precisas, diseñadas específicamente para la cosecha de grano."
+                    },
+                    {
+                        name: "Cultura Jōmon", color: 0xff4400, points: [[135, 35], [142, 40], [138, 32]],
+                        status: "Recolectores Especializados",
+                        desc: "Pobladores de las islas japonesas que, a pesar de no ser plenamente agricultores, crearon asentamientos fijos y arte complejo.",
+                        fact: "Su cerámica 'cordada' es de las más antiguas del mundo; usaban cuerdas para grabar dibujos en el barro fresco."
+                    },
+                    {
+                        name: "Cultura de Banpo", color: 0xff9800, points: [[107, 34], [112, 36], [110, 32]],
+                        status: "Aldeas Matriarcales",
+                        desc: "Asentamientos organizados en fosos circulares con casas semisubterráneas diseñadas para resistir el duro clima de China central.",
+                        fact: "Tenían cementerios separados para niños y adultos, y su cerámica muestra símbolos que algunos ven como origen de la escritura china."
+                    },
+                    {
+                        name: "Cultura de Mehrgarh", color: 0x9c27b0, points: [[66, 27], [70, 30], [68, 25]],
+                        status: "Pioneros del Indo",
+                        desc: "Sociedad avanzada que construyó las primeras casas de ladrillo de barro y desarrolló conocimientos médicos tempranos.",
+                        fact: "Se han hallado los restos más antiguos de odontología: dientes perforados con piedras para eliminar caries."
+                    },
+
+                    // ÁFRICA
+                    {
+                        name: "Pastores del Sáhara Verde", color: 0x4caf50, points: [[5, 20], [20, 25], [15, 18]],
+                        status: "Cazadores de la Sabana",
+                        desc: "Cultura que floreció en un Sáhara lleno de lagos y vegetación, centrada en la caza mayor y la pesca fluvial.",
+                        fact: "Sus pinturas rupestres muestran una fauna africana hoy inexistente en el desierto, como elefantes y jirafas."
+                    },
+                    {
+                        name: "Cultura Merimdense", color: 0x8bc34a, points: [[29, 29], [32, 31], [30, 28]],
+                        status: "Ancestros del Nilo",
+                        desc: "Primeros agricultores del delta de Egipto que sentaron las bases de la religión y la organización social faraónica.",
+                        fact: "Vivían en chozas de juncos y fueron los primeros en usar silos subterráneos para proteger el grano de los roedores."
+                    },
+
+                    // AMÉRICA
+                    {
+                        name: "Tradición Paiján", color: 0xff5722, points: [[-80, -10], [-75, -5], [-78, -15]],
+                        status: "Pescadores del Pacífico",
+                        desc: "Grupos humanos adaptados a la costa peruana que desarrollaron una tecnología de piedra única para la pesca y la caza.",
+                        fact: "Sus puntas 'Paiján' eran largas y delgadas, una proeza de la ingeniería lítica para aquella época."
+                    },
+                    {
+                        name: "Cultura Las Vegas", color: 0xff5722, points: [[-81, -2], [-78, 2], [-77, -3]],
+                        status: "Horticultores Tempranos",
+                        desc: "Pobladores de la costa de Ecuador que comenzaron a domesticar plantas silvestres mucho antes que otras culturas americanas.",
+                        fact: "Inventaron el cultivo de la calabaza, usándola no solo como alimento sino como los primeros recipientes de cocina."
+                    },
+                    {
+                        name: "Pueblos de la Gran Cuenca", color: 0x607d8b, points: [[-120, 35], [-110, 40], [-115, 32]],
+                        status: "Maestros del Desierto",
+                        desc: "Nómadas de Norteamérica que sobrevivían gracias a un conocimiento profundo de las plantas y el tejido de fibras naturales.",
+                        fact: "Sus cestas eran tan perfectas que podían contener agua y cocinar en ellas usando piedras calientes."
+                    },
+                    {
+                        name: "Tradición Chinchorro", color: 0x795548, points: [[-71, -22], [-69, -18], [-70, -25]],
+                        status: "Culto a los Ancestros",
+                        desc: "Sociedad costera en el desierto de Atacama famosa por desarrollar las técnicas de preservación de cuerpos más antiguas del mundo.",
+                        fact: "Momificaban a sus difuntos con barro y cañas 2000 años antes de que los egipcios empezaran a hacerlo."
+                    },
+
+                    // EUROPA
+                    {
+                        name: "Cultura Starčevo", color: 0xFF007F, points: [[16.0, 45.0], [19.0, 47.0], [18.0, 44.0]],
+                        status: "Migración Neolítica",
+                        desc: "Pueblos que trajeron la agricultura desde Anatolia hacia el centro de Europa, introduciendo el ganado doméstico.",
+                        fact: "Su cerámica blanca decorada con bandas rojas es el primer gran estilo artístico de la Europa continental."
+                    },
+                    {
+                        name: "Cultura Lepenski Vir", color: 0x00E5FF, points: [[20.5, 43.5], [22.5, 45.0], [21.5, 43.0]],
+                        status: "Arquitectos del Río",
+                        desc: "Comunidades de pescadores que construyeron las primeras aldeas planificadas con casas trapezoidales y suelos de piedra.",
+                        fact: "Esculpieron los famosos 'hombres-pez', las primeras estatuas monumentales de Europa."
+                    },
+                    {
+                        name: "Cultura Vinča", color: 0x7D26CD, points: [[24.0, 44.0], [27.0, 46.0], [26.0, 43.0]],
+                        status: "Sociedad Proto-Urbana",
+                        desc: "Una de las culturas más sofisticadas, con grandes asentamientos, metalurgia del cobre y sistemas de conteo.",
+                        fact: "Utilizaban sellos y tablillas con símbolos misteriosos que algunos consideran la forma más temprana de escritura."
+                    },
+                    {
+                        name: "Cultura Ertebølle", color: 0x3f51b5, points: [[8, 54], [14, 58], [12, 54]],
+                        status: "Pescadores del Báltico",
+                        desc: "Cazadores-recolectores del norte de Europa que resistieron la agricultura gracias a su dominio absoluto de los recursos marinos.",
+                        fact: "Vivían sobre enormes montículos de restos de marisco, lo que demuestra una dieta basada casi totalmente en el mar."
+                    }
+                ],
+                events: [
+                    {
+                        name: "Göbekli Tepe", lat: 37.22, lon: 35.82, iconUrl: '🗿', date: "9000-8000 a.C.",
+                        desc: "Tradicionalmente, creíamos que los humanos primero se asentaron y domesticaron plantas para sobrevivir, y solo entonces construyeron templos. Göbekli Tepe sugiere lo contrario: la religión fue el motor de la agricultura.",
+                        fact: "Sus pilares pesan hasta 20 toneladas. Se construyó ANTES de inventar la escritura o la rueda."
+                    },
+                    {
+                        name: "Jericó: La ciudad más antigua",
+                        lat: 31.85, lon: 35.45,
+                        iconUrl: '🧱',
+                        date: "Hace 10.000 años",
+                        desc: "Primera ciudad con murallas de piedra.",
+                        fact: "Su torre de piedra de 8 metros fue la estructura más alta hecha por el hombre durante miles de años."
+                    },
+                    {
+                        name: "Domesticación en Göbekli Tepe",
+                        lat: 37.22, lon: 38.92,
+                        iconUrl: '🐾',
+                        date: "Hace 11.000 años",
+                        desc: "El primer experimento social: religión masiva que impulsó la domesticación animal y vegetal.",
+                        fact: "El ADN no miente: todo el trigo que comemos hoy en el mundo desciende genéticamente de las plantas silvestres que crecen a solo 30 km de este templo."
+                    }
+                ]
+            },
+            {
+                year: -500, label: "500 a.C. - La Era de los Filósofos y los Grandes Imperios",
+                empires: [
+                    // ORIENTE PRÓXIMO Y EUROPA
+                    {
+                        name: "Imperio Persa Aqueménida", color: 0xffcc00, points: [[40, 25], [70, 40], [60, 20], [45, 15]],
+                        status: "Primer Imperio Universal",
+                        desc: "El imperio más grande visto hasta entonces, fundado por Ciro el Grande, que unió Mesopotamia, Egipto y el Indo bajo una sola ley.",
+                        fact: "Tenían el 'Camino Real', un sistema de postas que permitía enviar mensajes a 2700 km en solo 7 días; el internet de la antigüedad."
+                    },
+                    {
+                        name: "Grecia (Ciudades-Estado)", color: 0x00aaff, points: [[20, 37], [25, 40], [24, 35]],
+                        status: "Cuna de la Democracia",
+                        desc: "Un conjunto de ciudades independientes (Atenas, Esparta) unidas por la lengua y la cultura que desafiaron al gigante persa.",
+                        fact: "Atenas acababa de expulsar a sus tiranos e inventar la 'Democracia', permitiendo a los ciudadanos votar por primera vez."
+                    },
+                    {
+                        name: "Roma (República Temprana)", color: 0xcc0000, points: [[11, 41], [13, 43], [14, 40]],
+                        status: "Nacimiento de la República",
+                        desc: "Una pequeña ciudad-estado en Italia que acababa de expulsar a sus reyes etruscos para convertirse en República.",
+                        fact: "En el 509 a.C. juraron que nunca más un rey gobernaría Roma; un juramento que mantuvieron por casi 500 años."
+                    },
+
+                    // ASIA
+                    {
+                        name: "Reino de Magadha", color: 0xff8800, points: [[75, 20], [85, 25], [80, 15]],
+                        status: "Potencia del Ganges",
+                        desc: "Estado indio que se convirtió en el centro del budismo y el jainismo, dominando el comercio del río Ganges.",
+                        fact: "Fue el primer reino en usar elefantes de guerra de forma masiva, lo que los hacía casi invencibles en campo abierto."
+                    },
+                    {
+                        name: "Dinastía Zhou (Reinos Combatientes)", color: 0xffeb3b, points: [[110, 30], [120, 40], [115, 25]],
+                        status: "Las Cien Escuelas de Pensamiento",
+                        desc: "China estaba dividida en estados que luchaban entre sí, pero que vivían una explosión intelectual sin precedentes.",
+                        fact: "En este caos vivieron Confucio y Lao Tsé, cuyos pensamientos rigen la ética de Asia hasta el día de hoy."
+                    },
+
+                    // ÁFRICA
+                    {
+                        name: "Reino de Kush", color: 0x8b4513, points: [[30, 15], [35, 20], [33, 10]],
+                        status: "Faraones Negros",
+                        desc: "Ubicado en el actual Sudán, este reino mezcló la cultura egipcia con tradiciones africanas propias.",
+                        fact: "En su capital, Meroe, hay más pirámides que en todo Egipto, aunque son más pequeñas y empinadas."
+                    },
+                    {
+                        name: "Cultura Nok", color: 0x4caf50, points: [[5, 10], [15, 12], [10, 5]],
+                        status: "Maestros del Hierro",
+                        desc: "Ubicados en Nigeria, fueron una de las primeras culturas de África subsahariana en fundir hierro.",
+                        fact: "Creaban cabezas de terracota con peinados muy complejos que indican una sociedad con clases sociales muy marcadas."
+                    },
+
+                    // AMÉRICA
+                    {
+                        name: "Cultura Zapoteca (Monte Albán)", color: 0xff5722, points: [[-98, 15], [-94, 18], [-95, 14]],
+                        status: "Señores de los Valles",
+                        desc: "En Oaxaca, México, construyeron una de las primeras ciudades planificadas de Mesoamérica sobre un cerro aplanado a mano.",
+                        fact: "Inventaron uno de los primeros sistemas de escritura y calendario de América para registrar las hazañas de sus reyes."
+                    },
+                    {
+                        name: "Cultura Chavín", color: 0xe91e63, points: [[-78, -12], [-75, -8], [-77, -15]],
+                        status: "Centro de Peregrinación",
+                        desc: "El 'primer horizonte' cultural de los Andes peruanos, uniendo a pueblos lejanos bajo una misma religión.",
+                        fact: "Su templo, Chavín de Huántar, tenía una red de canales que hacía que el agua rugiera como un jaguar al pasar."
+                    },
+                    {
+                        name: "Cultura Paracas", color: 0x3f51b5, points: [[-76, -14], [-74, -16], [-75, -13]],
+                        status: "Cirujanos de la Costa",
+                        desc: "Famosos por sus textiles increíblemente detallados y sus conocimientos avanzados de anatomía.",
+                        fact: "Eran expertos en trepanaciones craneanas: hacían agujeros en el cráneo para curar heridas de guerra, ¡y los pacientes sobrevivían!"
+                    }
+                ],
+                events: [
+                    {
+                        name: "Vida de Buda", lat: 27.48, lon: 83.27, iconUrl: '☸️', date: "500 a.C.",
+                        desc: "Siddharta Gautama alcanza la iluminación en la India.",
+                        fact: "Su mensaje de paz y desapego se extendió por toda Asia, convirtiéndose en una de las religiones más grandes del mundo."
+                    },
+                    {
+                        name: "Reformas de Clístenes", lat: 37.98, lon: 23.72, iconUrl: '🗳️', date: "508 a.C.",
+                        desc: "Atenas establece las bases de la democracia moderna.",
+                        fact: "Introdujeron el 'ostracismo': el pueblo podía votar para desterrar a cualquier político que se volviera demasiado poderoso."
+                    },
+                    {
+                        name: "Confucio enseña su ética", lat: 35.59, lon: 116.98, iconUrl: '📜', date: "500 a.C.",
+                        desc: "El sabio chino propone un sistema basado en el respeto y la piedad filial.",
+                        fact: "No era una religión, sino un código de conducta que ha moldeado la administración pública de China durante 2500 años."
+                    },
+                    {
+                        name: "Fin de la Monarquía Romana", lat: 41.89, lon: 12.49, iconUrl: '🏛️', date: "509 a.C.",
+                        desc: "Roma expulsa al último rey, Tarquinio el Soberbio.",
+                        fact: "Este evento marca el inicio de la República, basada en el equilibrio de poder entre el Senado y el Pueblo (SPQR)."
+                    },
+                    {
+                        name: "Guerras Médicas", lat: 38.01, lon: 23.88, iconUrl: '⚔️', date: "490 a.C.",
+                        desc: "El pequeño ejército griego derrota al Imperio Persa en la Batalla de Maratón.",
+                        fact: "Un soldado corrió 42 km para avisar de la victoria y murió de agotamiento; de ahí nace la carrera de 'Maratón'."
+                    }
+                ]
+            },
+            {
+                year: -3100, label: "3100 a.C. - El Nacimiento de los Imperios",
+                empires: [
+                    // ÁFRICA
+                    { name: "Antiguo Egipto (Dinastía I)", color: 0xffcc00, points: [[30, 25], [33, 30], [35, 25], [32, 20]], status: "Unificación Real", desc: "Bajo el mando de Narmer (Menes).", fact: "Unieron el Alto y Bajo Egipto; su corona doble simbolizaba el control total del Nilo." },
+
+                    // ASIA
+                    { name: "Ciudades Sumerias", color: 0x00aaff, points: [[43, 30], [48, 33], [46, 30]], status: "Cuna de la Escritura", desc: "Mesopotamia.", fact: "Inventaron la rueda y el sistema sexagesimal (por eso el minuto tiene 60 segundos)." },
+                    { name: "Civilización del Indo", color: 0x4caf50, points: [[68, 25], [75, 30], [72, 20]], status: "Fase Temprana", desc: "Pakistán/India.", fact: "Tenían los sistemas de alcantarillado más avanzados del mundo; cada casa tenía su propio baño." },
+                    { name: "Cultura Longshan", color: 0x8d6e63, points: [[115, 35], [120, 38], [118, 30]], status: "China Calcolítica", desc: "Río Amarillo.", fact: "Eran maestros de la alfarería negra, tan fina como una cáscara de huevo." },
+
+                    // AMÉRICA
+                    { name: "Civilización Caral", color: 0xe91e63, points: [[-78, -10], [-76, -12], [-77, -8]], status: "Primera Ciudad de América", desc: "Norte de Lima, Perú.", fact: "Construyeron pirámides al mismo tiempo que Egipto, pero sin conocer la rueda ni el metal." },
+
+                    // EUROPA
+                    { name: "Cultura de las Cícladas", color: 0x9c27b0, points: [[24, 36], [26, 38], [25, 36]], status: "Marinos del Egeo", desc: "Islas Griegas.", fact: "Sus famosas estatuas de mármol blanco, minimalistas, parecen arte moderno de hoy en día." },
+                    {
+                        name: "Cultura de Cucuteni-Trypillia",
+                        color: 0xFF5722,
+                        points: [[25.0, 47.0], [32.0, 50.0], [35.0, 46.0], [28.0, 45.0]],
+                        status: "Sociedad de Megaciudades",
+                        desc: "Sociedad de agricultores que construyó los asentamientos más grandes de la prehistoria, con miles de casas de adobe decoradas.",
+                        fact: "Tenían el extraño ritual de quemar sus ciudades hasta los cimientos cada 60 años para reconstruirlas exactamente igual encima."
+                    },
+                    {
+                        name: "Cultura de los Vasos de Embudo",
+                        color: 0x4CAF50,
+                        points: [[5.0, 50.0], [15.0, 58.0], [20.0, 52.0], [10.0, 48.0]],
+                        status: "Ingenieros Megalíticos",
+                        desc: "Cultura que transformó el paisaje del norte europeo levantando tumbas gigantes de piedra y recintos ceremoniales circulares.",
+                        fact: "Fueron los primeros en Europa en usar bueyes para tirar del arado, lo que permitió alimentar a mucha más población."
+                    },
+                    {
+                        name: "Cultura de Los Millares",
+                        color: 0xFFC107,
+                        points: [[-3.0, 36.0], [-1.0, 38.0], [-2.0, 37.0]],
+                        status: "Pioneros de la Metalurgia",
+                        desc: "Complejo sistema de poblados fortificados con murallas y bastiones que controlaban las minas de cobre del sur de Iberia.",
+                        fact: "Su cementerio tiene 80 tumbas colectivas llamadas 'tholos', donde enterraban a sus líderes con tesoros de marfil y oro."
+                    },
+                    {
+                        name: "Cultura de las Cícladas",
+                        color: 0x00BCD4,
+                        points: [[24.0, 36.0], [26.0, 38.0], [25.0, 35.0]],
+                        status: "Navegantes y Artistas",
+                        desc: "Sociedad marítima experta en el comercio por el Egeo y en la talla de ídolos de mármol con formas humanas esquemáticas.",
+                        fact: "Sus barcos de remos les permitían conectar Grecia con Anatolia, intercambiando obsidiana y metales preciosos."
+                    },
+                    {
+                        name: "Cultura de Pfyn (Lago Constanza)",
+                        color: 0x9E9E9E,
+                        points: [[7.0, 46.0], [10.0, 48.0], [9.0, 46.0]],
+                        status: "Habitantes de los Lagos",
+                        desc: "Aldeas construidas sobre plataformas elevadas (palafitos) en las orillas de los lagos para protegerse de animales y humedad.",
+                        fact: "Eran maestros textiles; hacían redes de pesca y ropa de lino tan resistentes que se han conservado bajo el agua 5000 años."
+                    },
+                    {
+                        name: "Proto-Cultura de Stonehenge",
+                        color: 0x8BC34A,
+                        points: [[-3.0, 50.0], [-1.0, 52.0], [0.0, 51.0]],
+                        status: "Astrónomos del Neolítico",
+                        desc: "Comunidades que empezaron a transformar el paisaje inglés creando fosos circulares alineados con el sol y la luna.",
+                        fact: "En esta fase inicial no usaban piedras grandes, sino postes de madera y un gran foso circular hecho con picos de asta de ciervo."
+                    },
+                    {
+                        name: "Cultura de Gaudo",
+                        color: 0xE91E63,
+                        points: [[13.0, 40.0], [15.0, 42.0], [14.0, 39.0]],
+                        status: "Aristocracia Guerrera",
+                        desc: "Cultura itálica conocida por sus complejas tumbas familiares excavadas en la roca y su armamento avanzado de cobre.",
+                        fact: "Sus guerreros eran enterrados con dagas de cobre de 30 cm, lo que indica que el estatus social dependía de la destreza militar."
+                    }
+                ],
+                events: [
+                    {
+                        name: "Invención de la Escritura",
+                        lat: 30.5, lon: 47.5,
+                        iconUrl: '✍️',
+                        date: "3200-3100 a.C.",
+                        desc: "Aparición del Cuneiforme en Uruk.",
+                        fact: "No empezó para escribir poesía, sino para llevar la contabilidad del grano y la cerveza del templo."
+                    },
+                    {
+                        name: "Unificación de Egipto",
+                        lat: 29.8, lon: 31.2,
+                        iconUrl: '👑',
+                        date: "3100 a.C.",
+                        desc: "Menes establece la capital en Menfis.",
+                        fact: "La Paleta de Narmer es el documento histórico más antiguo que narra este evento."
+                    },
+                    {
+                        name: "Invención del Papel (Papiro)", lat: 30.0, lon: 31.0, iconUrl: '📜', date: "3000 a.C.",
+                        desc: "Primer soporte de escritura ligero.",
+                        fact: "A diferencia de las tablillas de arcilla, el papiro permitió crear las primeras 'bibliotecas' portátiles."
+                    },
+                    {
+                        name: "Primer Sistema de Drenaje", lat: 27.0, lon: 68.0, iconUrl: '🚿', date: "3100 a.C.",
+                        desc: "Ingeniería sanitaria en el Indo.",
+                        fact: "¡Tenían baños con agua corriente y desagües 4500 años antes de que fueran comunes en Europa!"
+                    },
+                    {
+                        name: "Construcción de Stonehenge", lat: 51.17, lon: -1.82, iconUrl: '🪨', date: "3100 a.C.",
+                        desc: "Comienzo del monumento megalítico.",
+                        fact: "Empezó como un círculo de tierra y hoyos para postes de madera antes de ser el monumento de piedra que conocemos."
+                    },
+                    {
+                        name: "Aparición del Quipu", lat: -10.8, lon: -77.5, iconUrl: '🧶', date: "3000 a.C.",
+                        desc: "Sistema de contabilidad por nudos en Caral.",
+                        fact: "Antes de los Incas, Caral ya usaba cuerdas anudadas para registrar datos, censos y tributos."
+                    }
+                ]
+            },
             {
                 year: 117, label: "117 d.C. - El Mundo Antiguo",
                 empires: [
@@ -244,7 +624,52 @@
                         date: "Año 112-117",
                         desc: "El centro comercial y político más grande del mundo antiguo.",
                         fact: "La Columna de Trajano todavía está en pie en Roma, narrando sus batallas piedra a piedra."
+                    },
+                    {
+                        name: "Máxima Extensión de Roma",
+                        lat: 41.90, lon: 12.49,
+                        iconUrl: '🏛️',
+                        date: "117 d.C.",
+                        desc: "Bajo el mando de Trajano, el Imperio alcanza su mayor gloria, extendiéndose desde las arenas de Mesopotamia hasta las brumas de Britania.",
+                        fact: "¡Un ciudadano podía cruzar de Londres a Bagdad sin salir jamás de territorio romano y usando la misma moneda!"
+                    },
+
+                    {
+                        name: "La Ruta de la Seda",
+                        lat: 34.26, lon: 108.94,
+                        iconUrl: '📦',
+                        date: "Siglo II d.C.",
+                        desc: "La Dinastía Han en China conecta el Lejano Oriente con Occidente, iniciando un intercambio masivo de seda, especias e ideas que cambió el mundo.",
+                        fact: "En esta época, los romanos estaban tan obsesionados con la seda china que el Senado intentó prohibirla por considerarla 'inmoral' y cara."
+                    },
+
+                    {
+                        name: "Biblioteca de Celso",
+                        lat: 37.93, lon: 27.34,
+                        iconUrl: '📜',
+                        date: "117 d.C.",
+                        desc: "En Éfeso se completa una de las bibliotecas más impresionantes de la antigüedad, albergando más de 12,000 rollos de papiro.",
+                        fact: "Fue diseñada con una doble pared para proteger los delicados manuscritos de la humedad y de los insectos devoradores de papel."
+                    },
+
+                    {
+                        name: "Teotihuacán: Pirámide del Sol",
+                        lat: 19.69, lon: -98.84,
+                        iconUrl: '☀️',
+                        date: "100-150 d.C.",
+                        desc: "En el corazón de México, se levanta una de las estructuras más colosales del hemisferio occidental, marcando el auge de la 'Ciudad de los Dioses'.",
+                        fact: "Es tan grande que su base es casi igual a la de la Gran Pirámide de Giza, aunque es menos alta."
                     }
+                ]
+            },
+            {
+                year: 1248, label: "1248 - Plena Baja Edad Media",
+                empires: [
+                    { name: "Corona de Castilla", color: 0xffcc00, points: [[-9, 36], [-2, 43], [-4, 37]], status: "Reconquista", desc: "Fernando III el Santo.", fact: "Este año se conquistó Sevilla, cambiando el equilibrio de poder en la península." },
+                    { name: "Imperio Mongol", color: 0xaa0000, points: [[60, 40], [110, 50], [120, 30], [80, 30]], status: "Horda de Oro", desc: "El imperio terrestre más grande.", fact: "Los jinetes mongoles podían dormir y comer mientras galopaban para no detener el avance." }
+                ],
+                events: [
+                    { name: "Toma de Sevilla", lat: 37.38, lon: -5.98, iconUrl: '⚔️', date: "Noviembre 1248", desc: "Castilla toma una de las ciudades más importantes de Al-Andalus.", fact: "Se utilizó una flota de barcos para romper el puente de barcas que unía la ciudad con Triana." }
                 ]
             },
             {
@@ -279,7 +704,8 @@
                     { name: "Taínos", color: 0xff88aa, points: [[-75, 18], [-68, 20], [-70, 16]], status: "Antillas", desc: "Primer contacto.", fact: "Palabras como 'huracán', 'barbacoa' y 'hamaca' vienen directamente de su idioma." }
                 ],
                 events: [
-                    { name: "Primer Viaje de Colón", lat: 24.0, lon: -74.5, iconUrl: '⛵', date: "12 Octubre", desc: "Llegada a la isla de Guanahani (San Salvador).", fact: "Colón creía firmemente que había llegado a las Indias orientales." }
+                    { name: "Primer Viaje de Colón", lat: 24.0, lon: -74.5, iconUrl: '⛵', date: "12 Octubre", desc: "Llegada a la isla de Guanahani (San Salvador).", fact: "Colón creía firmemente que había llegado a las Indias orientales." },
+                    { name: "Comercio Triangular", lat: 15.0, lon: -25.0, iconUrl: '⛓️', date: "Siglo XVIII", desc: "Flujo de manufacturas, esclavos y recursos entre Europa, África y América.", fact: "El Atlántico se convirtió en la autopista comercial del mundo, moviendo millones de toneladas de azúcar, café y personas." }
                 ]
             },
             {
@@ -395,14 +821,8 @@
                     { name: "Reino de la Mosquitia", color: 0x008888, points: [[-85, 13], [-82, 15], [-83, 12]], status: "Costa Caribe", desc: "Nicaragua/Honduras.", fact: "Su rey era coronado en Jamaica con una ceremonia británica de lo más extraña." }
                 ],
                 events: [
-                    {
-                        name: "Piratería en Nassau",
-                        lat: 25.04, lon: -77.34,
-                        iconUrl: '🏴‍☠️',
-                        date: "1715-1718",
-                        desc: "La 'República de los Piratas' alcanza su cénit.",
-                        fact: "Tras el hundimiento de la Flota de la Plata española en Florida (1715), miles de piratas como Barbanegra se lanzaron al Caribe."
-                    }
+                    { name: "Piratería en Nassau", lat: 25.04, lon: -77.34, iconUrl: '🏴‍☠️', date: "1715-1718", desc: "La 'República de los Piratas' alcanza su cénit.", fact: "Tras el hundimiento de la Flota de la Plata española en Florida (1715), miles de piratas como Barbanegra se lanzaron al Caribe." },
+                    { name: "Comercio Triangular", lat: 15.0, lon: -25.0, iconUrl: '⛓️', date: "Siglo XVIII", desc: "Flujo de manufacturas, esclavos y recursos entre Europa, África y América.", fact: "El Atlántico se convirtió en la autopista comercial del mundo, moviendo millones de toneladas de azúcar, café y personas." }
                 ]
             },
             {
@@ -445,48 +865,112 @@
                 ]
             },
             {
+                year: 1945, label: "1945 - El Fin de la Gran Guerra",
+                empires: [
+                    // SUPERPOTENCIAS EMERGENTES
+                    { name: "Estados Unidos", color: 0x0000ff, points: [[-125, 45], [-70, 45], [-80, 30], [-115, 30]], status: "Arsenal de la Democracia", desc: "Potencia atómica.", fact: "Al terminar la guerra, EE.UU. fabricaba 300.000 aviones al año, una cifra impensable para sus enemigos." },
+                    { name: "Unión Soviética (URSS)", color: 0xcc0000, points: [[30, 50], [170, 70], [150, 40], [40, 40]], status: "El Gigante Rojo", desc: "Ocupación de Europa del Este.", fact: "Plantaron su bandera en el Reichstag de Berlín tras la batalla urbana más sangrienta de la historia." },
+
+                    // POTENCIAS COLONIALES Y ALIADOS
+                    { name: "Imperio Británico", color: 0xff0000, points: [[-5, 50], [2, 58], [2, 50]], status: "Victoria Amarga", desc: "Liderados por Churchill.", fact: "Aunque ganaron, el esfuerzo de guerra dejó a Gran Bretaña en la quiebra absoluta." },
+                    { name: "República de China", color: 0x4488ff, points: [[100, 25], [120, 40], [115, 25]], status: "Resistencia", desc: "Bajo Chiang Kai-shek.", fact: "China resistió 8 años de invasión japonesa, sufriendo bajas civiles masivas." },
+
+                    // EL EJE EN COLAPSO
+                    { name: "Alemania Nazi (Ocupada)", color: 0x333333, points: [[6, 47], [15, 52], [14, 46]], status: "Capitulación", desc: "Dividida en zonas.", fact: "En mayo de 1945, Berlín era un cementerio de escombros dividido por cuatro banderas." },
+                    { name: "Imperio del Japón", color: 0xaaaaaa, points: [[130, 30], [145, 50], [140, 30]], status: "Última Resistencia", desc: "Hasta las bombas atómicas.", fact: "Se rindieron tras los bombardeos de Hiroshima y Nagasaki, los únicos ataques nucleares de la historia." },
+
+                    // ÁFRICA Y EL MEDITERRÁNEO
+                    { name: "Egipto (Protectorado)", color: 0x00ccff, points: [[28, 25], [35, 30], [33, 22]], status: "Estratégico", desc: "Control del Canal de Suez.", fact: "El control de este canal fue vital para llevar petróleo a los barcos aliados." }
+                ],
+                events: [
+                    {
+                        name: "Bombardeos Atómicos",
+                        lat: 34.38, lon: 132.45,
+                        iconUrl: '☢️',
+                        date: "Agosto 1945",
+                        desc: "Ataques sobre Hiroshima y Nagasaki.",
+                        fact: "Cambiaron la guerra para siempre, dando inicio a la 'Era Nuclear' y la Guerra Fría."
+                    },
+                    {
+                        name: "Fundación de la ONU",
+                        lat: 37.77, lon: -122.41,
+                        iconUrl: '🇺🇳',
+                        date: "Junio 1945",
+                        desc: "Nace la Organización de las Naciones Unidas en San Francisco.",
+                        fact: "Creada para evitar que una catástrofe como la Segunda Guerra Mundial volviera a ocurrir."
+                    },
+                    {
+                        name: "Conferencia de Yalta",
+                        lat: 44.49, lon: 34.16,
+                        iconUrl: '🤝',
+                        date: "Febrero 1945",
+                        desc: "Churchill, Roosevelt y Stalin deciden el futuro de Europa.",
+                        fact: "Aquí se acordó la división de Alemania y la entrada de la URSS en la guerra contra Japón."
+                    }
+                ]
+            },
+            {
                 year: 1960,
                 label: "1960 - Guerra Fría",
                 empires: [
                     {
                         name: "Unión Soviética",
                         color: 0xcc0000,
-                        points: [[30, 45], [40, 170], [75, 170], [80, 40], [50, 30]],
+                        // Formato: [Longitud, Latitud] - Cubriendo desde Europa del Este hasta el Pacífico
+                        points: [
+                            [30, 45],   // Límite Oeste (Ucrania/Bielorrusia)
+                            [30, 70],   // Límite Norte-Oeste
+                            [170, 70],  // Límite Norte-Este (Siberia)
+                            [170, 40],  // Límite Sur-Este
+                            [80, 35],   // Asia Central
+                            [40, 40]    // Cierre
+                        ],
                         status: "Bloque Este",
                         desc: "Superpotencia socialista en su apogeo bajo Jrushchov.",
                         fact: "En 1960, el Sputnik 5 llevó a las perras Belka y Strelka al espacio y las trajo vivas."
                     },
                     {
-                        name: "Estados Unidos (OTAN)",
+                        name: "EE.UU. (Mainland)",
                         color: 0x0033cc,
-                        points: [[-125, 25], [-125, 49], [-67, 49], [-67, 25]],
+                        // Coordenadas precisas para Norteamérica (Longitud es negativa en el Oeste)
+                        points: [
+                            [-125, 25], // Suroeste (California)
+                            [-125, 49], // Noroeste (Washington)
+                            [-67, 49],  // Noreste (Maine)
+                            [-67, 25],  // Sureste (Florida)
+                            [-125, 25]  // Cierre
+                        ],
                         status: "Bloque Oeste",
-                        desc: "Líder del mundo capitalista y la OTAN.",
-                        fact: "En 1960 se realizaron los primeros debates presidenciales televisados (Kennedy vs Nixon)."
+                        desc: "Líder del mundo capitalista.",
+                        fact: "Kennedy vs Nixon: Primer debate televisado de la historia."
                     },
                     {
                         name: "China Popular",
                         color: 0xffcc00,
-                        points: [[75, 20], [130, 20], [130, 50], [75, 50]],
+                        points: [
+                            [75, 20],   // Suroeste
+                            [75, 50],   // Noroeste
+                            [130, 50],  // Noreste
+                            [130, 20],  // Sureste
+                            [75, 20]    // Cierre
+                        ],
                         status: "Comunismo Asiático",
-                        desc: "Bajo el mando de Mao Zedong tras el Gran Salto Adelante.",
-                        fact: "1960 marcó el inicio de la ruptura sino-soviética por diferencias ideológicas."
+                        desc: "Bajo el mando de Mao Zedong.",
+                        fact: "1960 marcó el inicio de la ruptura sino-soviética."
                     },
                     {
-                        name: "Imperio Colonial Francés",
+                        name: "África Occidental (Influencia Francesa)",
                         color: 0x228b22,
-                        points: [[-17, 10], [20, 10], [20, 35], [-5, 35], [-17, 15]],
+                        points: [
+                            [-17, 5],   // Senegal
+                            [-17, 25],  // Mauritania
+                            [15, 25],   // Chad/Níger
+                            [15, 5],    // Nigeria/Camerún
+                            [-17, 5]    // Cierre
+                        ],
                         status: "Descolonización",
-                        desc: "Últimos coletazos del imperio en África y el Magreb.",
-                        fact: "1960 es conocido como el 'Año de África' porque 17 naciones africanas se independizaron de Francia."
-                    },
-                    {
-                        name: "Commonwealth Británica",
-                        color: 0xff69b4,
-                        points: [[110, -10], [155, -10], [155, -40], [110, -40]], // Foco en Australia/Asia
-                        status: "Post-Imperio",
-                        desc: "Transformación del Imperio en una asociación de naciones libres.",
-                        fact: "Nigeria se independizó del Reino Unido en octubre de este mismo año."
+                        desc: "Territorios en transición a la independencia.",
+                        fact: "1960 es el 'Año de África': 17 naciones nacieron este año."
                     }
                 ],
                 events: [
@@ -494,22 +978,22 @@
                         name: "Crisis de los U-2",
                         lat: 56.12, lon: 60.62,
                         iconUrl: '🛩️',
-                        date: "1 de mayo, 1960",
-                        desc: "Un avión espía de EE.UU. es derribado sobre la URSS.",
-                        fact: "El piloto Gary Powers fue capturado y luego canjeado por un espía soviético."
+                        date: "1960",
+                        desc: "Avión espía derribado sobre la URSS.",
+                        fact: "El incidente canceló la cumbre de París entre Eisenhower y Jrushchov."
                     },
                     {
-                        name: "Independencia de África",
-                        lat: 5.34, lon: -4.02,
-                        iconUrl: '🌍',
-                        date: "1960",
-                        desc: "Ola masiva de descolonización en el continente africano.",
-                        fact: "Camerún, Senegal, Togo y Nigeria, entre otros, nacieron como estados modernos este año."
+                        name: "Independencia de Nigeria",
+                        lat: 9.08, lon: 7.39,
+                        iconUrl: '🇳🇬',
+                        date: "1 de Octubre, 1960",
+                        desc: "Nigeria se independiza del Reino Unido.",
+                        fact: "Se convirtió en la nación más poblada de África instantáneamente."
                     }
                 ]
             },
             {
-                year: 2024, label: "2024 - El Mundo Contemporáneo",
+                year: 2026, label: "2026 - El Mundo Contemporáneo",
                 empires: [
                     // EUROPA
                     { name: "Unión Europea", color: 0x003399, points: [[-10, 40], [25, 55], [20, 40], [0, 40]], status: "Paz Democrática", desc: "27 naciones unidas.", fact: "¡Puedes viajar de Portugal a Finlandia sin enseñar el pasaporte ni una sola vez!" },
@@ -540,12 +1024,20 @@
                     { name: "Estación Espacial Internacional", lat: 0, lon: 0, iconUrl: '🏠', date: "Actualidad", desc: "Laboratorio de investigación en órbita terrestre baja.", fact: "Es el objeto individual más caro jamás construido por la humanidad." },
                     {
                         name: "Exploración de Marte (Perseverance)",
-                        lat: 18.4, lon: 77.5, // Coordenadas simbólicas en el planeta Tierra (Cabo Cañaveral)
+                        lat: 18.4, lon: 77.5,
                         iconUrl: '🚀',
                         date: "Actualidad",
                         desc: "Búsqueda de vida antigua en el cráter Jezero.",
                         fact: "El rover lleva un pequeño helicóptero llamado Ingenuity, el primer objeto en volar en otro planeta."
-                    }
+                    },
+                    {
+                        name: "Artemis II: Regreso a la Órbita Lunar",
+                        lat: 28.57, lon: -80.64,
+                        iconUrl: '🚀',
+                        date: "2025-2026",
+                        desc: "La primera misión tripulada del siglo XXI en abandonar la órbita terrestre baja para realizar un sobrevuelo lunar, probando los sistemas de supervivencia de la cápsula Orión.",
+                        fact: "¡Récord de distancia! Esta misión llevó a seres humanos más lejos de la Tierra de lo que jamás habían estado en toda la historia de la exploración espacial."
+                    },
                 ]
             }
         ];
@@ -555,6 +1047,35 @@
         let currentEventsData = []; // [NUEVO]
         const raycaster = new THREE.Raycaster();
         const tooltip = document.getElementById('tooltip');
+
+        // Array para rastrear los planos de emojis y rotarlos
+        let eventEmojiPlanes = [];
+
+        function updateEvents() {
+            eventEmojiPlanes.forEach(plane => {
+                // 1. Obtenemos la posición global del emoji para que no se mueva de su sitio
+                const worldPos = new THREE.Vector3();
+                plane.getWorldPosition(worldPos);
+
+                // 2. FORZAMOS al emoji a mirar a la cámara ignorando al padre
+                // .quaternion es la rotación local, pero al usar .setFromRotationMatrix 
+                // con la matriz de la cámara, lo alineamos con la pantalla.
+                plane.quaternion.copy(camera.quaternion);
+
+                // 3. Importante: Como el pinGroup está rotado, el emoji heredará una 
+                // rotación inversa. Para anularla, calculamos la rotación global deseada:
+                plane.matrixWorld.makeRotationFromQuaternion(camera.quaternion);
+                plane.matrixWorld.setPosition(worldPos);
+
+                // Descomponemos la matriz para que la rotación local sea la correcta 
+                // respecto al mundo, no respecto al pin.
+                if (plane.parent) {
+                    const m1 = new THREE.Matrix4();
+                    m1.copy(plane.parent.matrixWorld).invert();
+                    plane.quaternion.setFromRotationMatrix(m1.multiply(plane.matrixWorld));
+                }
+            });
+        }
 
         // --- FUNCIÓN PRINCIPAL DE RENDERIZADO POR AÑO ---
         function renderYear(year) {
@@ -579,7 +1100,7 @@
                     map: textureNight,
                     transparent: false,
                     opacity: 0.8,
-                    color: 0xaaaaaa,
+                    color: 0x888888,
                     blending: THREE.NoBlending
                 });
 
@@ -625,74 +1146,154 @@
             // --- PUNTO 2: RENDERIZAR EVENTOS GLOBALES (PUNTOS) [NUEVO] ---
             // --- PUNTO 2: RENDERIZAR EVENTOS GLOBALES (PINS ROJOS) ---
             // --- PUNTO 2: RENDERIZAR EVENTOS GLOBALES (PIN ROJO CORREGIDO) ---
+            // --- RENDERIZAR EVENTOS GLOBALES (PIN + EMOJI) ---
             if (data.events) {
+                eventEmojiPlanes = []; // Limpiar array de rotación
                 data.events.forEach(evt => {
                     const pinGroup = new THREE.Group();
                     const redMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
-                    // 1. El cono (Punta hacia abajo)
+                    // 1. El cono
                     const tipGeo = new THREE.ConeGeometry(0.012, 0.03, 16);
                     const tip = new THREE.Mesh(tipGeo, redMat);
-
-                    // ROTACIÓN CLAVE: Invertimos el cono 180 grados para que el pico mire abajo
                     tip.rotation.x = Math.PI;
-                    // Lo subimos la mitad de su altura para que el pico quede en el 0,0,0 local
                     tip.position.y = 0.013;
                     pinGroup.add(tip);
 
-                    // 2. La cabeza (Esfera arriba)
+                    // 2. La cabeza
                     const headGeo = new THREE.SphereGeometry(0.012, 16, 16);
                     const head = new THREE.Mesh(headGeo, redMat);
-                    // La colocamos en la base ancha del cono (que ahora está arriba)
                     head.position.y = 0.03;
                     pinGroup.add(head);
 
-                    // 3. Posicionamiento en el globo
+                    // 3. EMOJI DINÁMICO (Canvas)
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 64;
+                    canvas.height = 64;
+                    const ctx = canvas.getContext('2d');
+                    ctx.font = '48px serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(evt.iconUrl || '📍', 32, 32);
+
+                    const texture = new THREE.CanvasTexture(canvas);
+                    const emojiGeo = new THREE.PlaneGeometry(0.06, 0.06);
+                    const emojiMat = new THREE.MeshBasicMaterial({
+                        map: texture,
+                        transparent: true,
+                        side: THREE.DoubleSide
+                    });
+                    // ... dentro del loop de data.events
+                    const emojiPlane = new THREE.Mesh(emojiGeo, emojiMat);
+
+                    // IMPORTANTE: Lo subimos en el eje Y local del Pin para que flote sobre la cabeza
+                    emojiPlane.position.y = 0.08;
+
+                    // Guardamos la posición global inicial para usarla en el animate
+                    emojiPlane.userData = {
+                        type: 'event',
+                        data: evt,
+                        isEmoji: true // Flag para identificarlo en el animate
+                    };
+
+                    pinGroup.add(emojiPlane);
+                    eventEmojiPlanes.push(emojiPlane);
+
+                    // 4. Posicionamiento en el globo
                     const pos = latLonToVec3(evt.lat, evt.lon, 1.01);
                     pinGroup.position.copy(pos);
-
-                    // 4. Orientación: El grupo debe mirar hacia afuera del globo
-                    // Usamos una dirección que vaya desde el centro de la tierra hacia la posición del pin
                     const direction = pos.clone().normalize();
-                    const targetPos = pos.clone().add(direction);
-                    pinGroup.lookAt(targetPos);
-
-                    // Ajuste final de eje para que el "arriba" del pin coincida con el "afuera" del globo
+                    pinGroup.lookAt(pos.clone().add(direction));
                     pinGroup.rotateX(Math.PI / 2);
-
-                    // 5. Datos para el Raycaster
-                    head.userData = { type: 'event', data: evt };
-                    tip.userData = { type: 'event', data: evt };
 
                     eventsGroup.add(pinGroup);
                 });
             }
         }
 
-        // --- INTERACCIÓN (MouseMove / Hover) ACTUALIZADA [NUEVO] ---
+        window.addEventListener('click', onDocumentMouseDown, false);
+        window.addEventListener('touchstart', onDocumentMouseDown, false);
+
+        function onDocumentMouseDown(event) {
+            // Si es un toque táctil, ajustamos las coordenadas
+            let clientX, clientY;
+            if (event.touches) {
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+
+            // Convertimos la posición del click a coordenadas de Three.js (-1 a +1)
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+
+            // Lanzamos el rayo
+            raycaster.setFromCamera(mouse, camera);
+
+            // Calculamos los objetos que chocan con el rayo
+            // Aquí es donde buscas tu grupo de imperios o el globo
+            const intersects = raycaster.intersectObjects(empiresGroup.children);
+
+            if (intersects.length > 0) {
+                // ¡HEMOS TOCADO UN IMPERIO!
+                const selectedObject = intersects[0].object;
+
+                // Buscamos los datos del imperio que guardamos en el objeto
+                // (Asumiendo que guardaste la info en .userData al crearlos)
+                const data = selectedObject.userData;
+
+                // AQUÍ ES DONDE LLAMAS A LA FUNCIÓN QUE ACTUALIZA EL PANEL
+                onEmpireClick(data);
+            }
+        }
+
+        // 2. LA FUNCIÓN QUE ACTUALIZA EL HTML (Ponla en cualquier parte fuera de otras funciones)
+        function onEmpireClick(empireData) {
+            const panel = document.getElementById('info-panel');
+            const title = document.getElementById('info-title');
+            const desc = document.getElementById('info-desc');
+            const fact = document.getElementById('info-fact');
+
+            if (!empireData.name) return; // Seguridad
+
+            title.innerHTML = `<strong>${empireData.name}</strong>`;
+            desc.innerText = empireData.desc;
+            fact.innerText = "💡 " + empireData.fact;
+
+            // Animación de feedback visual
+            panel.style.display = 'block'; // Por si estaba oculto
+            panel.classList.add('active');
+        }
+
         window.addEventListener('mousemove', (event) => {
+            // Detectamos si es móvil una sola vez por evento
+            const isMobile = window.innerWidth <= 768;
+
             const mouse = new THREE.Vector2(
                 (event.clientX / window.innerWidth) * 2 - 1,
                 -(event.clientY / window.innerHeight) * 2 + 1
             );
             raycaster.setFromCamera(mouse, camera);
 
-            // Ocultar tooltip por defecto
             tooltip.style.display = 'none';
-            tooltip.className = ''; // Limpiar clases especiales
+            tooltip.className = '';
 
-            // 1. Detección Prioritaria: Eventos Globales (Raycasting 3D directo sobre los marcadores)
-            const eventIntersects = raycaster.intersectObjects(eventsGroup.children);
+            const eventIntersects = raycaster.intersectObjects(eventsGroup.children, true); // El 'true' es vital
 
             if (eventIntersects.length > 0) {
-                const evtData = eventIntersects[0].object.userData.data;
+                let obj = eventIntersects[0].object;
+                let evtData = obj.userData.data;
+                if (!evtData && obj.parent) evtData = obj.parent.userData.data;
 
-                tooltip.style.display = 'block';
-                tooltip.style.left = (event.clientX + 20) + 'px';
-                tooltip.style.top = (event.clientY + 20) + 'px';
-                tooltip.className = 'event-tooltip'; // Aplicar estilo Cyan
-
-                tooltip.innerHTML = `
+                if (evtData) {
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = isMobile ? '20px' : (event.clientX + 20) + 'px';
+                    tooltip.style.width = isMobile ? 'calc(100% - 40px)' : '';
+                    tooltip.style.top = (event.clientY + 20) + 'px';
+                    tooltip.className = 'event-tooltip';
+                    tooltip.innerHTML = `
                 <div class="event-tag">${evtData.iconUrl} EVENTO GLOBAL</div>
                 <h3>${evtData.name}</h3>
                 <p style="color: #00bcd4; font-weight: bold; font-size: 0.8rem; margin-bottom: 5px;">${evtData.date}</p>
@@ -701,64 +1302,58 @@
                     <p style="font-style: italic; font-size: 0.8rem; color: #fff; margin:0;">${evtData.fact}</p>
                 </div>
             `;
-                return; // Si encontramos evento, no buscamos imperio
+                }
+
+                return;
             }
 
-            // 2. Detección Secundaria: Imperios (Cálculo 2D lat/lon sobre el globo)
             const globeIntersects = raycaster.intersectObject(globe);
 
             if (globeIntersects.length > 0) {
                 const p = globeIntersects[0].point.clone().normalize();
                 const lat = Math.asin(p.y) * (180 / Math.PI);
-                // Matemática blindada que ya te funciona
                 let lon = Math.atan2(-p.z, p.x) * (180 / Math.PI);
 
-                // Buscar en el array de imperios actuales
                 const found = currentEmpiresData.find(emp => isPointInPoly([lon, lat], emp.points));
 
                 if (found) {
                     tooltip.style.display = 'block';
-                    tooltip.style.left = (event.clientX + 20) + 'px';
+                    tooltip.style.left = isMobile ? '20px' : (event.clientX + 20) + 'px';
+                    tooltip.style.width = isMobile ? 'calc(100% - 40px)' : '';
                     tooltip.style.top = (event.clientY + 20) + 'px';
 
-                    // Usamos tu innerHTML original que te funciona 'que te cagas'
                     tooltip.innerHTML = `
-                    <div style="border-left: 4px solid ${'#' + found.color.toString(16).padStart(6, '0')}; padding-left: 10px;">
-                        <span class="tag">${found.status}</span>
-                        <h3 style="margin: 2px 0; color: #ff9800;">${found.name}</h3>
-                        <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 8px;">${found.desc}</p>
-                        <div style="background: rgba(255,152,0,0.1); padding: 10px; border: 1px solid rgba(255,152,0,0.3); border-radius: 4px;">
-                            <strong style="color: #ff9800; font-size: 0.7rem; display: block; margin-bottom: 3px;">💡 DATO CURIOSO</strong>
-                            <p style="font-style: italic; font-size: 0.85rem; margin: 0; color: #fff;">${found.fact}</p>
-                        </div>
+                <div style="border-left: 4px solid ${'#' + found.color.toString(16).padStart(6, '0')}; padding-left: 10px;">
+                    <span class="tag">${found.status}</span>
+                    <h3 style="margin: 2px 0; color: #ff9800;">${found.name}</h3>
+                    <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 8px;">${found.desc}</p>
+                    <div style="background: rgba(255,152,0,0.1); padding: 10px; border: 1px solid rgba(255,152,0,0.3); border-radius: 4px;">
+                        <strong style="color: #ff9800; font-size: 0.7rem; display: block; margin-bottom: 3px;">💡 DATO CURIOSO</strong>
+                        <p style="font-style: italic; font-size: 0.85rem; margin: 0; color: #fff;">${found.fact}</p>
                     </div>
-                `;
+                </div>
+            `;
                 }
             }
         });
 
-        // --- EVENTOS DE UI ---
         document.getElementById('year-slider').addEventListener('input', (e) => {
             renderYear(parseInt(e.target.value));
         });
 
-        // --- BUCLE DE ANIMACIÓN ---
         function animate() {
             requestAnimationFrame(animate);
             // Las nubes solo rotan si están visibles (Modo Día)
             if (cloudMesh.visible) {
                 cloudMesh.rotation.y += 0.0001;
             }
+            updateEvents();
             controls.update();
             renderer.render(scene, camera);
         }
-
-        // --- INICIO ---
-        // Asegúrate de que el slider tenga el rango correcto: min="117" max="2024"
         renderYear(117);
         animate();
 
     </script>
 </body>
-
 </html>
